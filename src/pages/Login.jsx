@@ -42,7 +42,11 @@ export default function Login() {
 
         {/* LOGO */}
         <div style={styles.logoWrap}>
-          <div style={styles.logoIcon}>🚗</div>
+          <img
+            src="/Logo_Omsan.jpeg"
+            alt="Omsan Logistics"
+            style={styles.logoImg}
+          />
           <div style={styles.logoTitle}>Gestion des Avaries</div>
           <div style={styles.logoSub}>Connectez-vous pour continuer</div>
         </div>
@@ -123,9 +127,13 @@ const styles = {
     textAlign: "center",
     marginBottom: 28,
   },
-  logoIcon: {
-    fontSize: 48,
-    marginBottom: 10,
+  logoImg: {
+    height: 55,
+    objectFit: "contain",
+    borderRadius: 8,
+    background: "#fff",
+    padding: "6px 12px",
+    marginBottom: 14,
   },
   logoTitle: {
     fontSize: 22,

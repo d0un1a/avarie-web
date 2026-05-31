@@ -27,7 +27,17 @@ export default function Home() {
 
       {/* NAVBAR */}
       <div style={styles.navbar}>
-        <div style={styles.navLogo}>🚗 Avaries Manager</div>
+
+        {/* LOGO OMSAN — depuis public/ */}
+        <div style={styles.navLogo}>
+          <img
+            src="/Logo_Omsan.jpeg"
+            alt="Omsan Logistics"
+            style={styles.logoImg}
+          />
+        </div>
+
+        {/* RIGHT */}
         <div style={styles.navRight}>
           {user && (
             <span style={styles.userEmail}>👤 {user.email}</span>
@@ -64,7 +74,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer style={styles.footer}>
-        <p>© {new Date().getFullYear()} Avaries Manager</p>
+        <p>© {new Date().getFullYear()} Omsan Logistics — Avaries Manager</p>
       </footer>
     </div>
   );
@@ -85,16 +95,22 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: "16px 30px",
+    padding: "12px 30px",
     boxSizing: "border-box",
     borderBottom: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(0,0,0,0.2)",
+    background: "rgba(0,0,0,0.3)",
     backdropFilter: "blur(10px)",
   },
   navLogo: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+  },
+  logoImg: {
+    height: 40,
+    objectFit: "contain",
+    borderRadius: 6,
+    background: "#fff",
+    padding: "4px 8px",
   },
   navRight: {
     display: "flex",
