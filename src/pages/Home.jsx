@@ -1,9 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../api/supabase";
 import Dashboard from "./Dashboard";
 import Formulaire from "./Formulaire";
 
 export default function Home() {
   const [view, setView] = useState("home");
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user || null);
+    });
+  }, []);
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = "/login";
+  };
 
   if (view === "dashboard") return <Dashboard />;
   if (view === "create")
@@ -11,14 +24,23 @@ export default function Home() {
 
   return (
     <div style={styles.page}>
-      {/* HEADER */}
-      <header style={styles.header}>
-        <div style={styles.logo}>🚗 Avaries Manager</div>
-        <div style={styles.subtitle}>Gestion intelligente des avaries véhicules</div>
-      </header>
+
+      {/* NAVBAR */}
+      <div style={styles.navbar}>
+        <div style={styles.navLogo}>🚗 Avaries Manager</div>
+        <div style={styles.navRight}>
+          {user && (
+            <span style={styles.userEmail}>👤 {user.email}</span>
+          )}
+          <button style={styles.logoutBtn} onClick={logout}>
+            🚪 Déconnexion
+          </button>
+        </div>
+      </div>
 
       {/* HERO */}
       <section style={styles.hero}>
+        <div style={styles.subtitle}>Gestion intelligente des avaries véhicules</div>
         <h1 style={styles.title}>Gérez vos avaries simplement et rapidement</h1>
         <p style={styles.text}>
           Centralisez les dégâts, photos, cotations et informations véhicules dans un seul outil.
@@ -56,49 +78,71 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    padding: "40px 20px",
     fontFamily: "Arial",
   },
-
-  header: {
-    textAlign: "center",
-    marginBottom: 40,
+  navbar: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "16px 30px",
+    boxSizing: "border-box",
+    borderBottom: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(0,0,0,0.2)",
+    backdropFilter: "blur(10px)",
   },
-
-  logo: {
-    fontSize: 28,
+  navLogo: {
+    fontSize: 20,
     fontWeight: "bold",
-    marginBottom: 5,
+    color: "#fff",
   },
-
-  subtitle: {
-    opacity: 0.7,
+  navRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
   },
-
+  userEmail: {
+    fontSize: 13,
+    color: "rgba(255,255,255,0.7)",
+  },
+  logoutBtn: {
+    padding: "8px 14px",
+    border: "none",
+    borderRadius: 8,
+    background: "#e74c3c",
+    color: "#fff",
+    cursor: "pointer",
+    fontWeight: 600,
+    fontSize: 13,
+  },
   hero: {
     textAlign: "center",
     maxWidth: 700,
-    marginBottom: 50,
+    padding: "60px 20px 40px",
   },
-
+  subtitle: {
+    opacity: 0.6,
+    fontSize: 14,
+    marginBottom: 12,
+  },
   title: {
     fontSize: 34,
-    marginBottom: 10,
+    marginBottom: 14,
+    lineHeight: 1.3,
   },
-
   text: {
     fontSize: 16,
     opacity: 0.8,
   },
-
   grid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
     gap: 20,
     width: "100%",
     maxWidth: 800,
+    padding: "0 20px",
+    boxSizing: "border-box",
   },
-
   card: {
     background: "rgba(255,255,255,0.08)",
     border: "1px solid rgba(255,255,255,0.15)",
@@ -109,14 +153,13 @@ const styles = {
     textAlign: "center",
     backdropFilter: "blur(10px)",
   },
-
   icon: {
     fontSize: 30,
     marginBottom: 10,
   },
-
   footer: {
-    marginTop: 60,
+    marginTop: "auto",
+    padding: 20,
     opacity: 0.5,
     fontSize: 12,
   },
