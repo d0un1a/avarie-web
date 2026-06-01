@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../api/supabase";
 import VehicleSchema from "./VehicleSchema";
+import ChassisScanner from "./ChassisScanner";
 
 export default function Formulaire({ editData, onSaved, onCancelEdit }) {
   const [schemaKey, setSchemaKey] = useState(0);
   const [manqueType, setManqueType] = useState("");
-
   const emptyForm = {
     date: "",
     chassis: "",
@@ -27,10 +27,6 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
   const marques = [
     "Renault", "Dacia", "Peugeot", "Citroën", "Toyota", "Volkswagen",
     "Ford", "Fiat", "Hyundai", "Kia", "BMW", "Mercedes", "Autre"
-  ];
-
-  const responsabilites = [
-    "Transporteur", "Chargeur", "Destinataire", "Fabricant", "Indéterminée"
   ];
 
   useEffect(() => {
@@ -202,13 +198,16 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
             value={form.date}
             onChange={handleChange}
           />
-          <input
-            style={ui.input}
-            name="chassis"
-            value={form.chassis}
-            onChange={handleChange}
-            placeholder="N° de Châssis"
-          />
+          {/* CHASSIS avec scanner intégré — prend toute la largeur */}
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:6 }}>
+              N° de Châssis (VIN)
+            </div>
+            <ChassisScanner
+              value={form.chassis}
+              onChange={(val) => setForm(f => ({ ...f, chassis: val }))}
+            />
+          </div>
           <select
             style={ui.select}
             name="marque"
@@ -274,9 +273,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
           onChange={(e) => {
             const value = e.target.value;
             setNature(value);
-            if (value !== "Manque") {
-              setManqueType("");
-            }
+            if (value !== "Manque") setManqueType("");
           }}
         >
           <option value="">-- choisir --</option>
