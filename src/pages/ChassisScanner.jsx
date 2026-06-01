@@ -3,45 +3,48 @@ import { useState, useRef, useCallback } from "react";
 const VIN_REGEX = /^[A-HJ-NPR-Z0-9]{17}$/i;
 const isVIN = (str) => VIN_REGEX.test(str);
 
-// Charge ZXing via CDN (pas d'import statique → pas d'erreur Vite)
+function findVIN(raw) {
+  if (!raw) return null;
+  const upper = raw.toUpperCase();
+  // Cherche séquence de 17 chars VIN valides
+  const m = upper.match(/[A-HJ-NPR-Z0-9]{17}/g);
+  if (!m) return null;
+  // Parmi les candidats, retourne celui qui a chiffres ET lettres
+  for (const candidate of m) {
+    if (/[0-9]/.test(candidate) && /[A-HJ-NPR-Z]/.test(candidate))
+      return candidate;
+  }
+  return null;
+}
+
+// Charge ZXing UMD (version qui expose window.ZXing)
 function loadZXing() {
   if (window.ZXing) return Promise.resolve(window.ZXing);
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js";
-    s.onload  = () => resolve(window.ZXing);
+    // Version 0.18.6 — stable, expose correctement window.ZXing
+    s.src = "https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js";
+    s.onload  = () => {
+      if (window.ZXing) resolve(window.ZXing);
+      else reject(new Error("ZXing non chargé"));
+    };
     s.onerror = () => reject(new Error("Impossible de charger le scanner"));
     document.head.appendChild(s);
   });
 }
 
-// Cherche un VIN de 17 chars dans un texte
-function findVIN(raw) {
-  const clean = raw.toUpperCase().replace(/[^A-HJ-NPR-Z0-9]/g, "");
-  // Ligne de 17 chars avec chiffres et lettres
-  const chunks = raw.toUpperCase().split(/\s+/);
-  for (const chunk of chunks) {
-    const c = chunk.replace(/[^A-HJ-NPR-Z0-9]/g, "");
-    if (c.length === 17 && /[0-9]/.test(c) && /[A-Z]/.test(c)) return c;
-  }
-  const m = clean.match(/[A-HJ-NPR-Z0-9]{17}/);
-  return m ? m[0] : null;
-}
-
 export default function ChassisScanner({ value, onChange }) {
-  const [mode,    setMode]    = useState("idle");
-  const [status,  setStatus]  = useState("");
-  const [error,   setError]   = useState("");
+  const [mode,   setMode]   = useState("idle"); // idle | scanning | done
+  const [status, setStatus] = useState("");
+  const [error,  setError]  = useState("");
 
-  const videoRef  = useRef(null);
-  const streamRef = useRef(null);
-  const readerRef = useRef(null);
+  const videoRef   = useRef(null);
+  const streamRef  = useRef(null);
+  const timerRef   = useRef(null);
+  const canvasRef  = useRef(null);
 
   const stopCamera = useCallback(() => {
-    if (readerRef.current) {
-      try { readerRef.current.reset(); } catch (_) {}
-      readerRef.current = null;
-    }
+    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
       streamRef.current = null;
@@ -52,51 +55,78 @@ export default function ChassisScanner({ value, onChange }) {
 
   const startScanner = useCallback(async () => {
     setError("");
-    setStatus("Chargement…");
+    setStatus("Ouverture caméra…");
     setMode("scanning");
 
     try {
+      // 1. Ouvrir la caméra avec l'API native (fonctionne partout)
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: "environment" },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+        }
+      });
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      // 2. Charger ZXing
+      setStatus("Chargement scanner…");
       const ZXing = await loadZXing();
 
-      const hints = new Map();
-      hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-        ZXing.BarcodeFormat.DATA_MATRIX,  // QR carré Dacia (TEKOG)
-        ZXing.BarcodeFormat.QR_CODE,
-        ZXing.BarcodeFormat.CODE_128,     // Code-barres linéaire VIN
-        ZXing.BarcodeFormat.CODE_39,
-        ZXing.BarcodeFormat.PDF_417,
+      const hints = new Map([
+        [ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+          ZXing.BarcodeFormat.DATA_MATRIX,
+          ZXing.BarcodeFormat.QR_CODE,
+          ZXing.BarcodeFormat.CODE_128,
+          ZXing.BarcodeFormat.CODE_39,
+          ZXing.BarcodeFormat.PDF_417,
+        ]],
+        [ZXing.DecodeHintType.TRY_HARDER, true],
       ]);
-      hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
 
-      const reader = new ZXing.BrowserMultiFormatReader(hints, 300);
-      readerRef.current = reader;
+      const reader = new ZXing.BrowserMultiFormatReader(hints);
 
-      // Obtenir la caméra arrière
-      const devices = await ZXing.BrowserMultiFormatReader.listVideoInputDevices();
-      if (!devices.length) throw new Error("Aucune caméra détectée");
-      const cam = devices.find(d => /back|rear|environment/i.test(d.label))
-        || devices[devices.length - 1];
+      setStatus("📷 Pointez vers le QR code ou code-barres du châssis…");
 
-      setStatus("📷 Pointez vers le code-barres ou le QR code de l'étiquette");
+      // 3. Scanner frame par frame via canvas
+      const canvas = canvasRef.current;
+      const ctx    = canvas.getContext("2d");
 
-      await reader.decodeFromVideoDevice(
-        cam.deviceId,
-        videoRef.current,
-        (result, err) => {
-          if (!result) return;
-          const raw = result.getText();
-          console.log("Scan brut:", raw);
+      timerRef.current = setInterval(async () => {
+        const video = videoRef.current;
+        if (!video || video.readyState < 2) return;
 
-          // Cherche un VIN dans le résultat
-          const vin = findVIN(raw);
-          if (vin) {
-            onChange(vin);
-            setStatus(`✅ VIN : ${vin}`);
-            stopCamera();
-            setMode("done");
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+
+        try {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const luminance = new ZXing.RGBLuminanceSource(
+            imageData.data, canvas.width, canvas.height
+          );
+          const bitmap = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(luminance));
+          const result = reader.decode(bitmap);
+
+          if (result) {
+            const vin = findVIN(result.getText());
+            if (vin) {
+              onChange(vin);
+              setStatus(`✅ VIN : ${vin}`);
+              stopCamera();
+              setMode("done");
+            }
           }
+        } catch (_) {
+          // Pas de code détecté sur cette frame → on continue
         }
-      );
+      }, 300);
+
     } catch (e) {
       setError("Erreur : " + (e.message || String(e)));
       stopCamera();
@@ -113,7 +143,7 @@ export default function ChassisScanner({ value, onChange }) {
   return (
     <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
 
-      {/* Champ + bouton */}
+      {/* Champ + bouton caméra */}
       <div style={{ display:"flex", gap:8, alignItems:"stretch" }}>
         <div style={{ position:"relative", flex:1 }}>
           <input
@@ -123,7 +153,11 @@ export default function ChassisScanner({ value, onChange }) {
             placeholder="VIN — 17 caractères"
             style={{
               width:"100%", padding:"11px 52px 11px 12px", borderRadius:8,
-              border:`1.5px solid ${vinOk ? "#22c55e" : value.length > 0 ? "#ef4444" : "rgba(255,255,255,0.15)"}`,
+              border:`1.5px solid ${
+                vinOk            ? "#22c55e" :
+                value.length > 0 ? "#ef4444" :
+                                   "rgba(255,255,255,0.15)"
+              }`,
               outline:"none", background:"rgba(0,0,0,0.3)", color:"#fff",
               boxSizing:"border-box", fontSize:13, fontFamily:"monospace",
               letterSpacing:"0.08em", transition:"border 0.2s",
@@ -136,23 +170,19 @@ export default function ChassisScanner({ value, onChange }) {
           }}>{value.length}/17</span>
         </div>
 
-        {mode !== "scanning" ? (
-          <button onClick={startScanner} title="Scanner le code" style={{
+        <button
+          onClick={mode === "scanning" ? stopCamera : startScanner}
+          style={{
             padding:"0 16px", borderRadius:8,
-            border:"1.5px solid rgba(59,130,246,0.5)",
-            background:"rgba(59,130,246,0.15)", color:"#60a5fa",
+            border:`1.5px solid ${mode === "scanning" ? "rgba(239,68,68,0.5)" : "rgba(59,130,246,0.5)"}`,
+            background: mode === "scanning" ? "rgba(239,68,68,0.15)" : "rgba(59,130,246,0.15)",
+            color: mode === "scanning" ? "#f87171" : "#60a5fa",
             cursor:"pointer", fontSize:20, flexShrink:0, minWidth:52,
             display:"flex", alignItems:"center", justifyContent:"center",
-          }}>📷</button>
-        ) : (
-          <button onClick={stopCamera} style={{
-            padding:"0 16px", borderRadius:8,
-            border:"1.5px solid rgba(239,68,68,0.5)",
-            background:"rgba(239,68,68,0.15)", color:"#f87171",
-            cursor:"pointer", fontSize:16, flexShrink:0, minWidth:52,
-            display:"flex", alignItems:"center", justifyContent:"center",
-          }}>✕</button>
-        )}
+          }}
+        >
+          {mode === "scanning" ? "✕" : "📷"}
+        </button>
       </div>
 
       {/* Feedback VIN */}
@@ -186,41 +216,42 @@ export default function ChassisScanner({ value, onChange }) {
           <video ref={videoRef} muted playsInline
             style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
 
-          {/* Viseur carré pour Data Matrix */}
+          {/* Viseur */}
           <div style={{
             position:"absolute", inset:0, pointerEvents:"none",
             display:"flex", alignItems:"center", justifyContent:"center",
           }}>
             <div style={{
-              width:200, height:200,
+              width:220, height:220,
               border:"2px solid #3b82f6", borderRadius:8,
               boxShadow:"0 0 0 9999px rgba(0,0,0,0.5)",
               position:"relative",
             }}>
               {[
-                { top:-3, left:-3,   borderTop:"4px solid #60a5fa", borderLeft:"4px solid #60a5fa", borderRadius:"4px 0 0 0" },
-                { top:-3, right:-3,  borderTop:"4px solid #60a5fa", borderRight:"4px solid #60a5fa", borderRadius:"0 4px 0 0" },
-                { bottom:-3, left:-3,  borderBottom:"4px solid #60a5fa", borderLeft:"4px solid #60a5fa", borderRadius:"0 0 0 4px" },
-                { bottom:-3, right:-3, borderBottom:"4px solid #60a5fa", borderRight:"4px solid #60a5fa", borderRadius:"0 0 4px 0" },
-              ].map((s, i) => <div key={i} style={{ position:"absolute", width:20, height:20, ...s }} />)}
+                { top:-3,    left:-3,  borderTop:"4px solid #60a5fa",    borderLeft:"4px solid #60a5fa",    borderRadius:"4px 0 0 0" },
+                { top:-3,    right:-3, borderTop:"4px solid #60a5fa",    borderRight:"4px solid #60a5fa",   borderRadius:"0 4px 0 0" },
+                { bottom:-3, left:-3,  borderBottom:"4px solid #60a5fa", borderLeft:"4px solid #60a5fa",    borderRadius:"0 0 0 4px" },
+                { bottom:-3, right:-3, borderBottom:"4px solid #60a5fa", borderRight:"4px solid #60a5fa",   borderRadius:"0 0 4px 0" },
+              ].map((s, i) => <div key={i} style={{ position:"absolute", width:22, height:22, ...s }} />)}
             </div>
           </div>
 
-          {/* Instructions */}
+          {/* Status */}
           <div style={{
             position:"absolute", bottom:0, left:0, right:0,
-            padding:"10px 16px", background:"rgba(0,0,0,0.7)",
-            backdropFilter:"blur(4px)",
+            padding:"10px 16px", background:"rgba(0,0,0,0.65)", backdropFilter:"blur(4px)",
+            textAlign:"center",
           }}>
-            <div style={{ color:"rgba(255,255,255,0.9)", fontSize:11, textAlign:"center", lineHeight:1.5 }}>
-              {status}
-            </div>
-            <div style={{ color:"rgba(255,255,255,0.5)", fontSize:10, textAlign:"center", marginTop:4 }}>
-              Cadrez le QR code carré <strong style={{color:"#60a5fa"}}>TEKOG</strong> ou le code-barres linéaire
+            <div style={{ color:"rgba(255,255,255,0.9)", fontSize:11 }}>{status}</div>
+            <div style={{ color:"rgba(255,255,255,0.45)", fontSize:10, marginTop:3 }}>
+              Cadrez le QR code <strong style={{color:"#60a5fa"}}>TEKOG</strong> ou le code-barres
             </div>
           </div>
         </div>
       )}
+
+      {/* Canvas caché pour le scan frame par frame */}
+      <canvas ref={canvasRef} style={{ display:"none" }} />
 
       {/* Succès */}
       {mode === "done" && (
@@ -242,7 +273,7 @@ export default function ChassisScanner({ value, onChange }) {
         <div style={{
           padding:"8px 12px", borderRadius:8,
           background:"rgba(239,68,68,0.1)", border:"1px solid rgba(239,68,68,0.4)",
-          color:"#fca5a5", fontSize:11,
+          color:"#fca5a5", fontSize:11, lineHeight:1.5,
         }}>⚠️ {error}</div>
       )}
     </div>
