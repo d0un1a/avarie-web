@@ -56,7 +56,7 @@ export default function Home() {
             fontSize: isMobile ? 12 : 13,
             padding: isMobile ? "6px 10px" : "8px 14px",
           }} onClick={logout}>
-            🚪 {isMobile ? "" : "Deconnexion"}
+            🚪 {isMobile ? "Exit" : "Deconnexion"}
           </button>
         </div>
       </div>

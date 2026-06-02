@@ -288,15 +288,29 @@ function CarModel({ selected, onPartClick, focusPartName, controlsRef }) {
 
 useGLTF.preload("/car.glb");
 
-export default function VehicleSchema({ onChange, nature, manqueType, onManqueChange }) {
+export default function VehicleSchema({ onChange, nature, manqueType, onManqueChange, initialZones, initialAutre }) {
   const isMobile = useIsMobile();
-  const [selected,      setSelected]      = useState([]);
+  const [selected, setSelected] = useState(initialZones || []);
   const [autoRotate,    setAutoRotate]    = useState(true);
   const [focusPartName, setFocusPartName] = useState(null);
   const controlsRef = useRef();
   const [openGroups, setOpenGroups] = useState(
     Object.fromEntries(GROUPS.map(g => [g.label, true]))
   );
+
+  // Synchroniser les zones initiales quand editData change
+  useEffect(() => {
+    if (initialZones && initialZones.length > 0) {
+      setSelected(initialZones);
+    }
+  }, [JSON.stringify(initialZones)]);
+
+  const [autreVal, setAutreVal] = useState(initialAutre || "");
+
+  // Synchroniser autreVal quand initialAutre change
+  useEffect(() => {
+    if (initialAutre) setAutreVal(initialAutre);
+  }, [initialAutre]);
 
   const toggle = useCallback((partName) => {
     setSelected(prev => {
@@ -442,18 +456,21 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
         {/* Champ Autre */}
         <div style={{ marginTop:4 }}>
           <input
+            value={autreVal}
             style={{
-              padding:"7px 10px", borderRadius:8,
+              padding:10, borderRadius:8,
               border:"1px solid rgba(255,255,255,0.15)",
-              outline:"none", background:"rgba(255,255,255,0.05)",
+              outline:"none", background:"rgba(0,0,0,0.25)",
               color:"#fff", width:"100%", boxSizing:"border-box", fontSize:11,
             }}
             placeholder="✏️ Autre position (saisie libre)..."
             onChange={(e) => {
-              const val = e.target.value.trim();
+              const val = e.target.value;
+              setAutreVal(val);
+              const trimmed = val.trim();
               setSelected(prev => {
                 const filtered = prev.filter(x => !x.startsWith("Autre:"));
-                const updated  = val ? [...filtered, `Autre: ${val}`] : filtered;
+                const updated  = trimmed ? [...filtered, `Autre: ${trimmed}`] : filtered;
                 onChange?.(updated);
                 return updated;
               });
@@ -468,7 +485,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
               padding:10, borderRadius:8,
               border:"1px solid rgba(255,255,255,0.15)",
               outline:"none", background:"rgba(0,0,0,0.25)",
-              color:"#fff", width:"100%", boxSizing:"border-box",
+              color:"#fff", width:"100%", boxSizing:"border-box", fontSize:11,
             }} value={manqueType} onChange={(e) => onManqueChange(e.target.value)}
               placeholder="Ex : tapis, cle, outillage..."/>
           </div>

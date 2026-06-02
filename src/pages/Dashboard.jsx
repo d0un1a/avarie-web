@@ -116,7 +116,7 @@ export default function Dashboard() {
       : "linear-gradient(135deg,#ef4444,#b91c1c)",
   });
 
-  // ── Carte mobile pour chaque ligne ──
+  // ── Carte mobile ──
   const MobileCard = ({ r }) => {
     const pos = r.position || (r.zones || []).join(", ");
     return (
@@ -125,7 +125,6 @@ export default function Dashboard() {
         border: "1px solid rgba(255,255,255,0.1)",
         borderRadius: 12, padding: 14, marginBottom: 10,
       }}>
-        {/* En-tete carte */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
           <div>
             <div style={{ fontWeight:700, fontSize:14, color:"#fff" }}>{r.chassis || "—"}</div>
@@ -133,17 +132,15 @@ export default function Dashboard() {
           </div>
           <span style={badgeColor(r.cotation)}>{r.cotation}</span>
         </div>
-
-        {/* Infos en grille 2 col */}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"6px 12px", marginBottom:10 }}>
           {[
-            ["Marque",        r.marque],
-            ["Modele",        r.modele],
-            ["Transporteur",  r.transporteur],
-            ["BL",            r.bl],
-            ["Responsabilite",r.responsabilite],
-            ["Provenance",    r.provenance],
-            ["Nature",        r.nature],
+            ["Marque",         r.marque],
+            ["Modele",         r.modele],
+            ["Transporteur",   r.transporteur],
+            ["BL",             r.bl],
+            ["Responsabilite", r.responsabilite],
+            ["Provenance",     r.provenance],
+            ["Nature",         r.nature],
           ].map(([label, val]) => val ? (
             <div key={label}>
               <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)", textTransform:"uppercase" }}>{label}</div>
@@ -151,29 +148,19 @@ export default function Dashboard() {
             </div>
           ) : null)}
         </div>
-
-        {/* Zones */}
         {pos && (
           <div style={{ marginBottom:10 }}>
             <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)", textTransform:"uppercase", marginBottom:4 }}>Position</div>
             <div style={{ display:"flex", flexWrap:"wrap", gap:4 }}>
               {pos.split(",").map(z => z.trim()).filter(Boolean).map((zone, i) => (
-                <span key={i} style={{
-                  padding:"2px 8px", borderRadius:999, fontSize:11,
-                  background:"rgba(255,255,255,0.1)", color:"#e5e7eb",
-                }}>{zone}</span>
+                <span key={i} style={{ padding:"2px 8px", borderRadius:999, fontSize:11, background:"rgba(255,255,255,0.1)", color:"#e5e7eb" }}>{zone}</span>
               ))}
               {r.nature === "Manque" && r.manqueType && (
-                <span style={{
-                  padding:"2px 8px", borderRadius:999, fontSize:11,
-                  background:"rgba(251,191,36,0.2)", color:"#fbbf24",
-                }}>{r.manqueType}</span>
+                <span style={{ padding:"2px 8px", borderRadius:999, fontSize:11, background:"rgba(251,191,36,0.2)", color:"#fbbf24" }}>{r.manqueType}</span>
               )}
             </div>
           </div>
         )}
-
-        {/* Photo + Actions */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           {r.photos?.length > 0
             ? <img src={r.photos[0].url} style={{ width:44, height:44, borderRadius:8, objectFit:"cover" }} />
@@ -187,6 +174,15 @@ export default function Dashboard() {
       </div>
     );
   };
+
+  // ── Si mode édition : afficher UNIQUEMENT le formulaire ──
+  if (edit) return (
+    <Formulaire
+      editData={edit}
+      onSaved={() => { setEdit(null); load(); }}
+      onCancelEdit={() => setEdit(null)}
+    />
+  );
 
   return (
     <div style={{ ...styles.page, padding: isMobile ? 12 : 20 }}>
@@ -217,7 +213,6 @@ export default function Dashboard() {
       {/* TOOLBAR */}
       <div style={{ ...styles.toolbar, gap: isMobile ? 6 : 10 }}>
         <button style={styles.btn} onClick={() => window.location.href = "/"}>🏠</button>
-        <button style={styles.btn} onClick={load}>🔄</button>
         <button style={styles.btn} onClick={exportExcel}>⬇ xlsx</button>
         <button style={styles.btn} onClick={exportCSV}>⬇ csv</button>
         <input
@@ -228,28 +223,12 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* EDIT FORM */}
-      {edit && (
-        <div style={{
-          ...styles.card,
-          background: "rgba(255,255,255,0.04)",
-          border: "1px solid rgba(255,255,255,0.1)",
-          borderRadius: 12, marginBottom: 15, padding: isMobile ? 10 : 15,
-        }}>
-          <Formulaire
-            editData={edit}
-            onSaved={() => { setEdit(null); load(); }}
-            onCancelEdit={() => setEdit(null)}
-          />
-        </div>
-      )}
-
       {/* COMPTEUR */}
       <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:8 }}>
         {sorted.length} avarie(s) trouvee(s)
       </div>
 
-      {/* AFFICHAGE : Cartes sur mobile, Tableau sur desktop */}
+      {/* AFFICHAGE */}
       {isMobile ? (
         <div>
           {sorted.length === 0 && (
@@ -264,12 +243,11 @@ export default function Dashboard() {
           <table style={styles.table}>
             <thead>
               <tr style={styles.head}>
-                {["date","chassis","marque","modele","transporteur","bl","responsabilite","provenance","nature"].map(k => (
+                {["date","chassis","marque","modele","transporteur","bl","responsabilite","provenance","nature","position"].map(k => (
                   <th key={k} onClick={() => toggleSort(k)} style={styles.th}>
                     {k.charAt(0).toUpperCase()+k.slice(1)} {sortKey===k ? (sortAsc?"↑":"↓") : ""}
                   </th>
                 ))}
-                <th style={styles.th}>Position</th>
                 <th style={styles.th}>Cotation</th>
                 <th style={styles.th}>Photos</th>
                 <th style={styles.th}>Actions</th>
@@ -330,27 +308,12 @@ const styles = {
   title: { margin:0 },
   userBar: { display:"flex", alignItems:"center", gap:12 },
   userEmail: { color:"rgba(255,255,255,0.6)" },
-  logoutBtn: {
-    padding:"8px 14px", border:"none", borderRadius:8,
-    background:"#e74c3c", color:"#fff", cursor:"pointer", fontWeight:600,
-  },
+  logoutBtn: { padding:"8px 14px", border:"none", borderRadius:8, background:"#e74c3c", color:"#fff", cursor:"pointer", fontWeight:600 },
   toolbar: { display:"flex", marginBottom:12, flexWrap:"wrap" },
-  btn: {
-    padding:"10px 12px", border:"none", borderRadius:8,
-    background:"#111", color:"#fff", cursor:"pointer",
-  },
-  search: {
-    flex:1, minWidth:150, padding:10, borderRadius:8,
-    border:"1px solid rgba(255,255,255,0.2)",
-    background:"rgba(0,0,0,0.3)", color:"#fff", outline:"none",
-  },
+  btn: { padding:"10px 12px", border:"none", borderRadius:8, background:"#111", color:"#fff", cursor:"pointer" },
+  search: { flex:1, minWidth:150, padding:10, borderRadius:8, border:"1px solid rgba(255,255,255,0.2)", background:"rgba(0,0,0,0.3)", color:"#fff", outline:"none" },
   card: {},
-  tableWrap: {
-    background:"rgba(255,255,255,0.06)", borderRadius:14,
-    maxHeight:"calc(100vh - 160px)", overflowY:"auto", overflowX:"auto",
-    border:"1px solid rgba(255,255,255,0.12)",
-    backdropFilter:"blur(14px)", boxShadow:"0 10px 30px rgba(0,0,0,0.25)",
-  },
+  tableWrap: { background:"rgba(255,255,255,0.06)", borderRadius:14, maxHeight:"calc(100vh - 160px)", overflowY:"auto", overflowX:"auto", border:"1px solid rgba(255,255,255,0.12)", backdropFilter:"blur(14px)", boxShadow:"0 10px 30px rgba(0,0,0,0.25)" },
   table: { minWidth:"1400px", borderCollapse:"collapse", color:"#fff" },
   head: { background:"rgba(0,0,0,0.55)", position:"sticky", top:0, zIndex:2, backdropFilter:"blur(10px)" },
   row: { borderBottom:"1px solid rgba(255,255,255,0.08)", transition:"0.2s" },

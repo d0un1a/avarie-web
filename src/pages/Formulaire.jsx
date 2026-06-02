@@ -51,8 +51,15 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
         responsabilite: editData.responsabilite || "",
         provenance: editData.provenance || "",
       });
-      setZones(editData.zones || []);
+      // Reprendre les zones depuis zones[] ou depuis position string
+      const zonesFromData = editData.zones?.length
+        ? editData.zones
+        : editData.position
+          ? editData.position.split(",").map(z => z.trim()).filter(Boolean)
+          : [];
+      setZones(zonesFromData);
       setNature(editData.nature || "");
+      setManqueType(editData.manqueType || "");
       setCotation(editData.cotation || "V1");
       setPhotos(editData.photos || []);
     } else {
@@ -316,11 +323,13 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
       <div style={{ ...ui.card, overflow:"hidden" }}>
         <div style={ui.title}>📍 Position de l'avarie</div>
         <VehicleSchema
-          key={schemaKey}
+          key={editData?.id || schemaKey}
           onChange={setZones}
           nature={nature}
           manqueType={manqueType}
           onManqueChange={setManqueType}
+          initialZones={zones}
+          initialAutre={zones.find(z => z.startsWith("Autre:"))?.replace("Autre: ","") || ""}
         />
       </div>
 
