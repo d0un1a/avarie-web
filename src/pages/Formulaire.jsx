@@ -75,19 +75,38 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
     setForm({ ...form, [e.target.name]: e.target.value });
 
   const uploadPhotos = async (files) => {
-    let uploaded = [];
-    for (let file of files) {
-      const fileName = `${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from("avaries-photos")
-        .upload(fileName, file);
-      if (error) continue;
-      const { data } = supabase.storage
-        .from("avaries-photos")
-        .getPublicUrl(fileName);
-      uploaded.push({ name: file.name, url: data.publicUrl });
+    const fileArray = Array.from(files);
+    setLoading(true);
+    try {
+      // Upload en parallèle pour aller plus vite
+      const results = await Promise.all(
+        fileArray.map(async (file) => {
+          try {
+            const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${file.name}`;
+            const { error } = await supabase.storage
+              .from("avaries-photos")
+              .upload(fileName, file, { cacheControl: "3600", upsert: false });
+            if (error) { console.warn("Upload error:", error.message); return null; }
+            const { data } = supabase.storage
+              .from("avaries-photos")
+              .getPublicUrl(fileName);
+            return { name: file.name, url: data.publicUrl };
+          } catch (e) {
+            console.warn("Upload failed for", file.name, e.message);
+            return null;
+          }
+        })
+      );
+      const uploaded = results.filter(Boolean);
+      setPhotos(uploaded);
+      if (uploaded.length < fileArray.length) {
+        alert(`${uploaded.length}/${fileArray.length} photo(s) uploadee(s). Verifiez votre connexion.`);
+      }
+    } catch (e) {
+      alert("Erreur upload : " + e.message);
+    } finally {
+      setLoading(false);
     }
-    setPhotos(uploaded);
   };
 
   const save = async () => {
