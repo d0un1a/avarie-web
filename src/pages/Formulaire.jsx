@@ -207,7 +207,13 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
         <div style={ui.title}>🚗 Informations vehicule</div>
         <div style={ui.grid2}>
           <input
-            style={ui.input}
+            style={{
+              ...ui.input,
+              colorScheme: "dark",
+              WebkitAppearance: "none",
+              appearance: "none",
+              color: form.date ? "#fff" : "rgba(255,255,255,0.5)",
+            }}
             type="date"
             name="date"
             value={form.date}
