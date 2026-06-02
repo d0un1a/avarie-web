@@ -5,21 +5,32 @@ import * as THREE from "three";
 
 THREE.ColorManagement.enabled = true;
 
+// Hook responsive
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
+
 const MESH_TO_PART = {
   "Object_3":  "Pare-choc avant",
   "Object_1":  "Capot",
   "Object_2":  "Toit",
-  "Object_18": "Pare-brise arrière",
+  "Object_18": "Pare-brise arriere",
   "Object_17": "Coffre",
-  "Object_4":  "Pare-choc arrière",
+  "Object_4":  "Pare-choc arriere",
   "Object_5":  "Porte avant gauche",
   "Object_8":  "Porte avant droite",
-  "Object_11": "Porte arrière gauche",
-  "Object_14": "Porte arrière droite",
+  "Object_11": "Porte arriere gauche",
+  "Object_14": "Porte arriere droite",
   "Object_19": "Roue avant gauche",
   "Object_20": "Roue avant droite",
-  "Object_21": "Roue arrière gauche",
-  "Object_22": "Roue arrière droite",
+  "Object_21": "Roue arriere gauche",
+  "Object_22": "Roue arriere droite",
 };
 
 const HITBOXES = [
@@ -27,26 +38,26 @@ const HITBOXES = [
   { part: "Capot",              pos: [ 1.185, 1.25,  0.00], size: [1.97, 0.10, 1.85] },
   { part: "Pare-brise avant",   pos: [ 0.575, 1.56,  0.00], size: [0.75, 0.65, 1.55] },
   { part: "Toit",               pos: [-1.010, 1.91,  0.00], size: [2.42, 0.06, 1.50] },
-  // Lunette arrière : vitre inclinée en HAUT (entre toit et coffre)
-  { part: "Pare-brise arrière", pos: [-2.08, 1.55,  0.00], size: [0.50, 0.45, 1.20] },
+  // Lunette arriere : vitre inclinee en HAUT (entre toit et coffre)
+  { part: "Pare-brise arriere", pos: [-2.08, 1.55,  0.00], size: [0.50, 0.45, 1.20] },
   // Coffre : panneau vertical AR sous la lunette
   { part: "Coffre",             pos: [-2.32, 1.10, 0.00], size: [0.55, 0.55, 1.50] },
-  { part: "Pare-choc arrière",  pos: [-2.590, 0.48,  0.00], size: [0.06, 0.75, 2.00] },
+  { part: "Pare-choc arriere",  pos: [-2.590, 0.48,  0.00], size: [0.06, 0.75, 2.00] },
   { part: "Aile avant gauche",  pos: [ 1.707, 0.82, -1.10], size: [0.93, 0.90, 0.06] },
   { part: "Aile avant droite",  pos: [ 1.707, 0.82,  1.10], size: [0.93, 0.90, 0.06] },
   { part: "Porte avant gauche", pos: [ 0.531, 0.90, -1.10], size: [1.43, 1.10, 0.06] },
   { part: "Porte avant droite", pos: [ 0.531, 0.90,  1.10], size: [1.43, 1.10, 0.06] },
-  { part: "Porte arrière gauche",pos: [-0.706, 0.90, -1.10], size: [1.05, 1.10, 0.06] },
-  { part: "Porte arrière droite",pos: [-0.706, 0.90,  1.10], size: [1.05, 1.10, 0.06] },
-  { part: "Aile arrière gauche", pos: [-1.730, 0.82, -1.10], size: [0.50, 0.90, 0.06] },
-  { part: "Aile arrière droite", pos: [-1.730, 0.82,  1.10], size: [0.50, 0.90, 0.06] },
+  { part: "Porte arriere gauche",pos: [-0.706, 0.90, -1.10], size: [1.05, 1.10, 0.06] },
+  { part: "Porte arriere droite",pos: [-0.706, 0.90,  1.10], size: [1.05, 1.10, 0.06] },
+  { part: "Aile arriere gauche", pos: [-1.730, 0.82, -1.10], size: [0.50, 0.90, 0.06] },
+  { part: "Aile arriere droite", pos: [-1.730, 0.82,  1.10], size: [0.50, 0.90, 0.06] },
 ];
 
 const WHEELS = [
   { part: "Roue avant gauche",   pos: [ 1.726, 0.416, -1.228], radius: 0.38 },
   { part: "Roue avant droite",   pos: [ 1.725, 0.416,  1.228], radius: 0.38 },
-  { part: "Roue arrière gauche", pos: [-1.646, 0.416, -1.228], radius: 0.38 },
-  { part: "Roue arrière droite", pos: [-1.646, 0.417,  1.228], radius: 0.38 },
+  { part: "Roue arriere gauche", pos: [-1.646, 0.416, -1.228], radius: 0.38 },
+  { part: "Roue arriere droite", pos: [-1.646, 0.417,  1.228], radius: 0.38 },
 ];
 
 const GROUPS = [
@@ -56,15 +67,15 @@ const GROUPS = [
   },
   {
     label: "🟢 Portes",
-    parts: ["Porte avant gauche","Porte avant droite","Porte arrière gauche","Porte arrière droite"],
+    parts: ["Porte avant gauche","Porte avant droite","Porte arriere gauche","Porte arriere droite"],
   },
   {
     label: "🔴 Roues",
-    parts: ["Roue avant gauche","Roue avant droite","Roue arrière gauche","Roue arrière droite"],
+    parts: ["Roue avant gauche","Roue avant droite","Roue arriere gauche","Roue arriere droite"],
   },
   {
-    label: "🟠 Toit, Ailes & Arrière",
-    parts: ["Toit","Aile arrière gauche","Aile arrière droite","Pare-brise arrière","Coffre","Pare-choc arrière"],
+    label: "🟠 Toit, Ailes & Arriere",
+    parts: ["Toit","Aile arriere gauche","Aile arriere droite","Pare-brise arriere","Coffre","Pare-choc arriere"],
   },
 ];
 
@@ -169,7 +180,7 @@ function CarModel({ selected, onPartClick, focusPartName, controlsRef }) {
     autoFitScene(scene);
   }, [scene]);
 
-  // Sauvegarder les valeurs originales de chaque matériau (sans cloner)
+  // Sauvegarder les valeurs originales de chaque materiau (sans cloner)
   useEffect(() => {
     if (!scene) return;
     scene.traverse((child) => {
@@ -215,7 +226,7 @@ function CarModel({ selected, onPartClick, focusPartName, controlsRef }) {
     setFocusTarget(phantom);
   }, [focusPartName, scene]);
 
-  // Coloration : modifier directement le matériau original (pas un clone)
+  // Coloration : modifier directement le materiau original (pas un clone)
   useEffect(() => {
     if (!scene) return;
     scene.traverse((child) => {
@@ -278,6 +289,7 @@ function CarModel({ selected, onPartClick, focusPartName, controlsRef }) {
 useGLTF.preload("/car.glb");
 
 export default function VehicleSchema({ onChange, nature, manqueType, onManqueChange }) {
+  const isMobile = useIsMobile();
   const [selected,      setSelected]      = useState([]);
   const [autoRotate,    setAutoRotate]    = useState(true);
   const [focusPartName, setFocusPartName] = useState(null);
@@ -302,9 +314,16 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
     setOpenGroups(prev => ({ ...prev, [label]: !prev[label] }));
 
   return (
-    <div style={{ display:"flex", gap:20, alignItems:"flex-start" }}>
+    <div style={{
+      display:"flex",
+      flexDirection: isMobile ? "column" : "row",
+      gap: isMobile ? 12 : 20,
+      alignItems:"flex-start",
+    }}>
       <div style={{
-        width:380, height:280, borderRadius:12,
+        width: isMobile ? "100%" : 380,
+        height: isMobile ? 220 : 280,
+        borderRadius:12,
         border:"1px solid rgba(255,255,255,0.1)",
         background:"linear-gradient(135deg,#0a0f1e,#0f172a)",
         overflow:"hidden", flexShrink:0, position:"relative",
@@ -329,7 +348,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
           position:"absolute", bottom:8, left:8, zIndex:10,
           display:"flex", gap:8, fontSize:9, color:"rgba(255,255,255,0.4)",
         }}>
-          <span>🟢 Sélectionné</span>
+          <span>🟢 Selectionne</span>
           <span>💠 Survol</span>
           <span>🖱️ Drag • Scroll</span>
         </div>
@@ -346,7 +365,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
           style={{ background:"transparent" }}
         >
           <Suspense fallback={null}>
-            {/* Éclairage doux pour ne pas écraser les textures/feux du GLB */}
+            {/* Eclairage doux pour ne pas ecraser les textures/feux du GLB */}
             <ambientLight intensity={1.2} />
             <directionalLight position={[5,8,5]}   intensity={1.8} castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024}/>
             <directionalLight position={[-5,6,-3]}  intensity={1.0} />
@@ -371,7 +390,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
         </Canvas>
       </div>
 
-      <div style={{ flex:1, maxHeight:280, overflowY:"auto", display:"flex", flexDirection:"column", gap:4 }}>
+      <div style={{ flex:1, maxHeight: isMobile ? "none" : 280, overflowY: isMobile ? "visible" : "auto", display:"flex", flexDirection:"column", gap:4 }}>
         {GROUPS.map((group) => {
           const isOpen        = openGroups[group.label];
           const groupSelected = group.parts.filter(p => selected.includes(p)).length;
@@ -449,7 +468,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
               outline:"none", background:"rgba(0,0,0,0.25)",
               color:"#fff", width:"100%", boxSizing:"border-box",
             }} value={manqueType} onChange={(e) => onManqueChange(e.target.value)}
-              placeholder="Ex : tapis, clé, outillage..."/>
+              placeholder="Ex : tapis, cle, outillage..."/>
           </div>
         )}
       </div>

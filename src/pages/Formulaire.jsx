@@ -1,9 +1,19 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../api/supabase";
 import VehicleSchema from "./VehicleSchema";
-import ChassisScanner from "./ChassisScanner";
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(typeof window !== "undefined" && window.innerWidth < 640);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, []);
+  return isMobile;
+}
 
 export default function Formulaire({ editData, onSaved, onCancelEdit }) {
+  const isMobile = useIsMobile();
   const [schemaKey, setSchemaKey] = useState(0);
   const [manqueType, setManqueType] = useState("");
   const emptyForm = {
@@ -25,7 +35,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
   const [loading, setLoading] = useState(false);
 
   const marques = [
-    "Renault", "Dacia", "Peugeot", "Citroën", "Toyota", "Volkswagen",
+    "Renault", "Dacia", "Peugeot", "Citroen", "Toyota", "Volkswagen",
     "Ford", "Fiat", "Hyundai", "Kia", "BMW", "Mercedes", "Autre"
   ];
 
@@ -74,7 +84,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
   };
 
   const save = async () => {
-    if (!form.chassis) return alert("Châssis obligatoire");
+    if (!form.chassis) return alert("Chassis obligatoire");
     setLoading(true);
     const entry = {
       ...form,
@@ -92,7 +102,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
       : await supabase.from("Avaries").insert([entry]);
     setLoading(false);
     if (result.error) return alert(result.error.message);
-    alert(editData ? "Modification ✔" : "Création ✔");
+    alert(editData ? "Modification ✔" : "Creation ✔");
     setForm(emptyForm);
     setZones([]);
     setNature("");
@@ -112,28 +122,28 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
 
   const ui = {
     page: {
-      padding: 24,
+      padding: isMobile ? 12 : 24,
       minHeight: "100vh",
       fontFamily: "Arial",
       background: "linear-gradient(135deg, #0f172a, #1e293b)",
       color: "#fff",
     },
     header: {
-      fontSize: 22,
+      fontSize: isMobile ? 18 : 22,
       fontWeight: 700,
-      marginBottom: 20,
+      marginBottom: isMobile ? 12 : 20,
       color: "#fff",
     },
     grid2: {
       display: "grid",
-      gridTemplateColumns: "repeat(2, 1fr)",
+      gridTemplateColumns: isMobile ? "1fr" : "repeat(2, 1fr)",
       gap: 12,
     },
     card: {
       background: "rgba(255,255,255,0.06)",
-      padding: 18,
+      padding: isMobile ? 12 : 18,
       borderRadius: 12,
-      marginBottom: 16,
+      marginBottom: isMobile ? 10 : 16,
       border: "1px solid rgba(255,255,255,0.12)",
       boxShadow: "0 10px 30px rgba(0,0,0,0.25)",
       backdropFilter: "blur(14px)",
@@ -151,6 +161,8 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
       outline: "none",
       background: "rgba(0,0,0,0.25)",
       color: "#fff",
+      width: "100%",
+      boxSizing: "border-box",
     },
     select: {
       padding: 10,
@@ -158,11 +170,14 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
       border: "1px solid rgba(255,255,255,0.15)",
       background: "rgba(0,0,0,0.25)",
       color: "#fff",
+      width: "100%",
+      boxSizing: "border-box",
     },
     actions: {
       display: "flex",
       gap: 10,
       marginTop: 20,
+      flexWrap: "wrap",
     },
     btn: {
       padding: "10px 14px",
@@ -184,12 +199,12 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
   return (
     <div style={ui.page}>
       <div style={ui.header}>
-        {editData ? "✏️ Modifier Avarie" : "➕ Création Avarie"}
+        {editData ? "✏️ Modifier Avarie" : "➕ Creation Avarie"}
       </div>
 
       {/* VEHICULE */}
       <div style={ui.card}>
-        <div style={ui.title}>🚗 Informations véhicule</div>
+        <div style={ui.title}>🚗 Informations vehicule</div>
         <div style={ui.grid2}>
           <input
             style={ui.input}
@@ -198,16 +213,13 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
             value={form.date}
             onChange={handleChange}
           />
-          {/* CHASSIS avec scanner intégré — prend toute la largeur */}
-          <div style={{ gridColumn: "1 / -1" }}>
-            <div style={{ fontSize:12, color:"rgba(255,255,255,0.5)", marginBottom:6 }}>
-              N° de Châssis (VIN)
-            </div>
-            <ChassisScanner
-              value={form.chassis}
-              onChange={(val) => setForm(f => ({ ...f, chassis: val }))}
-            />
-          </div>
+          <input
+            style={ui.input}
+            name="chassis"
+            value={form.chassis}
+            onChange={handleChange}
+            placeholder="N° de Chassis"
+          />
           <select
             style={ui.select}
             name="marque"
@@ -224,7 +236,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
             name="modele"
             value={form.modele}
             onChange={handleChange}
-            placeholder="Modèle"
+            placeholder="Modele"
           />
         </div>
       </div>
@@ -252,7 +264,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
             name="responsabilite"
             value={form.responsabilite}
             onChange={handleChange}
-            placeholder="Responsabilité"
+            placeholder="Responsabilite"
           />
           <input
             style={ui.input}
@@ -277,16 +289,16 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
           }}
         >
           <option value="">-- choisir --</option>
-          <option>Éclat</option>
+          <option>Eclat</option>
           <option>Rayure</option>
           <option>Bosse</option>
           <option>Cabosse</option>
           <option>Frottement</option>
           <option>Enforcement</option>
-          <option>Férayeur</option>
+          <option>Ferayeur</option>
           <option>Picot</option>
           <option>Mal plaquet</option>
-          <option>Dechiré</option>
+          <option>Dechire</option>
           <option>Crevaison</option>
           <option>Fissuration</option>
           <option>Casse</option>
@@ -338,7 +350,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
           onClick={save}
           disabled={loading}
         >
-          {loading ? "..." : editData ? "Modifier" : "Créer"}
+          {loading ? "..." : editData ? "Modifier" : "Creer"}
         </button>
 
         {editData && (
