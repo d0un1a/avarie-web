@@ -319,6 +319,8 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
       flexDirection: isMobile ? "column" : "row",
       gap: isMobile ? 12 : 20,
       alignItems:"flex-start",
+      overflow:"hidden",
+      width:"100%",
     }}>
       <div style={{
         width: isMobile ? "100%" : 380,
@@ -390,7 +392,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
         </Canvas>
       </div>
 
-      <div style={{ flex:1, maxHeight: isMobile ? "none" : 280, overflowY: isMobile ? "visible" : "auto", display:"flex", flexDirection:"column", gap:4 }}>
+      <div style={{ flex:1, width: isMobile ? "100%" : "auto", minWidth:0, maxHeight: isMobile ? "none" : 280, overflowY: isMobile ? "visible" : "auto", display:"flex", flexDirection:"column", gap:4 }}>
         {GROUPS.map((group) => {
           const isOpen        = openGroups[group.label];
           const groupSelected = group.parts.filter(p => selected.includes(p)).length;
@@ -412,7 +414,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
                 </span>
               </div>
               {isOpen && (
-                <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:3, marginTop:3, paddingLeft:4 }}>
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:3, marginTop:3 }}>
                   {group.parts.map((id) => {
                     const isActive  = selected.includes(id);
                     const isFocused = focusPartName === id;

@@ -313,7 +313,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
       </div>
 
       {/* POSITION */}
-      <div style={ui.card}>
+      <div style={{ ...ui.card, overflow:"hidden" }}>
         <div style={ui.title}>📍 Position de l'avarie</div>
         <VehicleSchema
           key={schemaKey}
@@ -328,7 +328,7 @@ export default function Formulaire({ editData, onSaved, onCancelEdit }) {
       <div style={ui.card}>
         <div style={ui.title}>📊 Cotation</div>
         <select
-          style={ui.select}
+          style={{ ...ui.select, width: "auto", minWidth: 120 }}
           value={cotation}
           onChange={(e) => setCotation(e.target.value)}
         >
