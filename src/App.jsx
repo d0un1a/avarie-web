@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "./api/supabase";
+import { initProfile } from "./config/appConfig"; // ✅ Initialiser le profil au démarrage
 import Home from "./pages/Home";
-import Dashboard from "./pages/Dashboard";
-import Formulaire from "./pages/Formulaire";
 import Login from "./pages/Login";
 
 function LoadingScreen() {
@@ -40,7 +39,11 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // ✅ Écoute les changements EN PREMIER
+    // ✅ Initialiser le profil au démarrage
+    const company = initProfile();
+    console.log(`🏢 Profil actif: ${company}`);
+
+    // ✅ Écoute les changements d'authentification
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user || null);
       setLoading(false);
@@ -73,24 +76,6 @@ export default function App() {
           element={
             <PrivateRoute user={user} loading={loading}>
               <Home />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute user={user} loading={loading}>
-              <Dashboard />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/formulaire"
-          element={
-            <PrivateRoute user={user} loading={loading}>
-              <Formulaire />
             </PrivateRoute>
           }
         />

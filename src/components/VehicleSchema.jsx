@@ -62,19 +62,19 @@ const WHEELS = [
 
 const GROUPS = [
   {
-    label: "🔵 Avant",
+    label: "Avant",
     parts: ["Pare-choc avant","Capot","Pare-brise avant","Aile avant gauche","Aile avant droite"],
   },
   {
-    label: "🟢 Portes",
+    label: "Portes",
     parts: ["Porte avant gauche","Porte avant droite","Porte arriere gauche","Porte arriere droite"],
   },
   {
-    label: "🔴 Roues",
+    label: "Roues",
     parts: ["Roue avant gauche","Roue avant droite","Roue arriere gauche","Roue arriere droite"],
   },
   {
-    label: "🟠 Toit, Ailes & Arriere",
+    label: "Toit, Ailes & Arriere",
     parts: ["Toit","Aile arriere gauche","Aile arriere droite","Pare-brise arriere","Coffre","Pare-choc arriere"],
   },
 ];
@@ -419,7 +419,7 @@ export default function VehicleSchema({ onChange, nature, manqueType, onManqueCh
                 display:"flex", justifyContent:"space-between", alignItems:"center",
                 fontSize:11, fontWeight:700, color:"#fff", userSelect:"none",
               }}>
-                <span>{group.label}</span>
+                <span style={{ textDecoration: "underline" }}>{group.label}</span>
                 <span style={{ display:"flex", alignItems:"center", gap:8 }}>
                   {groupSelected>0 && (
                     <span style={{ color:"#22c55e", fontSize:10 }}>{groupSelected}/{group.parts.length}</span>
