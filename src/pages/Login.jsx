@@ -15,7 +15,9 @@ function useIsMobile() {
 
     window.addEventListener("resize", handler);
 
-    return () => window.removeEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+    };
   }, []);
 
   return isMobile;
@@ -26,6 +28,7 @@ export default function Login() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -70,6 +73,20 @@ export default function Login() {
   return (
     <div style={styles.page}>
 
+      {/* MASQUER L'OEIL NATIF DU NAVIGATEUR */}
+      <style>
+        {`
+          input[type="password"]::-ms-reveal,
+          input[type="password"]::-ms-clear {
+            display: none;
+          }
+
+          input[type="password"]::-webkit-textfield-decoration-container {
+            display: none;
+          }
+        `}
+      </style>
+
       {/* ZONE LOGIN */}
       <div style={styles.loginArea}>
         <div
@@ -107,10 +124,13 @@ export default function Login() {
               Gestion des Avaries
             </div>
 
+
+
             <div style={styles.logoSub}>
               Connectez-vous pour continuer
             </div>
           </div>
+
 
           {/* ERREUR */}
           {error && (
@@ -146,19 +166,79 @@ export default function Login() {
               Mot de passe
             </label>
 
-            <input
-              style={styles.input}
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
-              onKeyDown={(e) =>
-                e.key === "Enter" &&
-                handleLogin()
-              }
-            />
+            <div style={styles.passwordWrap}>
+              <input
+                style={styles.passwordInput}
+                type={
+                  showPassword
+                    ? "text"
+                    : "password"
+                }
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) =>
+                  setPassword(e.target.value)
+                }
+                onKeyDown={(e) =>
+                  e.key === "Enter" &&
+                  handleLogin()
+                }
+              />
+
+              {/* OEIL */}
+              <button
+                type="button"
+                onClick={() =>
+                  setShowPassword(
+                    (prev) => !prev
+                  )
+                }
+                style={styles.eyeButton}
+                aria-label={
+                  showPassword
+                    ? "Masquer le mot de passe"
+                    : "Afficher le mot de passe"
+                }
+              >
+                {showPassword ? (
+                  /* OEIL OUVERT */
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="2.5"
+                    />
+                  </svg>
+                ) : (
+                  /* OEIL FERME */
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3l18 18" />
+                    <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                    <path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5 0 8.5 4 10 8-0.6 1.7-1.5 3.1-2.7 4.3" />
+                    <path d="M6.2 6.2C4.6 6.8 3.4 8.7 2 12c1.5 4 5 8 10 8 1.7 0 3.2-.4 4.5-1.1" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* BOUTON */}
@@ -249,20 +329,20 @@ const styles = {
     marginBottom: 14,
   },
 
-  logoTitle: {
-    fontWeight: 700,
+ logoTitle: {
+  fontWeight: 700,
+  color: "#fff",
+  lineHeight: 1.3,
+  marginTop: 4,
+  marginBottom: 10,
+},
 
-    color: "#fff",
-
-    marginBottom: 6,
-  },
-
-  logoSub: {
-    fontSize: 13,
-
-    color:
-      "rgba(255,255,255,0.5)",
-  },
+logoSub: {
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: "rgba(255,255,255,0.62)",
+  textAlign: "center",
+},
 
   errorBox: {
     background:
@@ -319,6 +399,62 @@ const styles = {
     outline: "none",
 
     boxSizing: "border-box",
+  },
+
+  passwordWrap: {
+    position: "relative",
+
+    width: "100%",
+  },
+
+  passwordInput: {
+    width: "100%",
+
+    padding: "11px 44px 11px 11px",
+
+    borderRadius: 8,
+
+    border:
+      "1px solid rgba(255,255,255,0.15)",
+
+    background:
+      "rgba(0,0,0,0.25)",
+
+    color: "#fff",
+
+    fontSize: 14,
+
+    outline: "none",
+
+    boxSizing: "border-box",
+  },
+
+  eyeButton: {
+    position: "absolute",
+
+    right: 0,
+
+    top: 0,
+
+    height: "100%",
+
+    width: 44,
+
+    display: "flex",
+
+    alignItems: "center",
+
+    justifyContent: "center",
+
+    border: "none",
+
+    background: "transparent",
+
+    color: "#fff",
+
+    cursor: "pointer",
+
+    padding: 0,
   },
 
   btn: {
