@@ -178,6 +178,24 @@ export default function FormulairOmsan({
   };
 
   // ==================================================
+  // Format affichage date mobile
+  // ==================================================
+
+  const formatDateDisplay = (value) => {
+    if (!value) {
+      return "JJ/MM/AAAA";
+    }
+
+    const [year, month, day] = value.split("-");
+
+    if (!year || !month || !day) {
+      return "JJ/MM/AAAA";
+    }
+
+    return `${day}/${month}/${year}`;
+  };
+
+  // ==================================================
   // Upload photos
   // ==================================================
 
@@ -595,25 +613,82 @@ export default function FormulairOmsan({
 
           <div style={ui.grid2}>
 
-            <input
-             style={{
-  ...ui.input,
-  colorScheme: "dark",
-  WebkitAppearance: "auto",
-  appearance: "auto",
-  color: form.date
-    ? "#fff"
-    : "rgba(255,255,255,0.5)",
-  width: "100%",
-  maxWidth: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-}}
-              type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-            />
+            {/* DATE */}
+
+            {isMobile ? (
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                  height: 42,
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  style={{
+                    ...ui.input,
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 12px",
+                    boxSizing: "border-box",
+                    color: form.date
+                      ? "#fff"
+                      : "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  <span>
+                    {formatDateDisplay(form.date)}
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: 18,
+                      lineHeight: 1,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    📅
+                  </span>
+                </div>
+
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    opacity: 0,
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            ) : (
+              <input
+                style={{
+                  ...ui.input,
+                  colorScheme: "dark",
+                  WebkitAppearance: "auto",
+                  appearance: "auto",
+                  color: form.date
+                    ? "#fff"
+                    : "rgba(255,255,255,0.5)",
+                }}
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+              />
+            )}
 
             <input
               style={ui.input}

@@ -171,6 +171,24 @@ export default function FormulairSomaca({
   };
 
   // --------------------------------------------------
+  // Format affichage date mobile
+  // --------------------------------------------------
+
+  const formatDateDisplay = (value) => {
+    if (!value) {
+      return "JJ/MM/AAAA";
+    }
+
+    const [year, month, day] = value.split("-");
+
+    if (!year || !month || !day) {
+      return "JJ/MM/AAAA";
+    }
+
+    return `${day}/${month}/${year}`;
+  };
+
+  // --------------------------------------------------
   // Upload photos
   // --------------------------------------------------
 
@@ -513,59 +531,40 @@ export default function FormulairSomaca({
 
     title: {
       fontSize: 15,
-
       fontWeight: 600,
-
       marginBottom: 12,
-
       color: "#fff",
     },
 
     input: {
       padding: 10,
-
       borderRadius: 8,
-
       border:
         "1px solid rgba(255,255,255,0.15)",
-
       outline: "none",
-
       background:
         "rgba(0,0,0,0.25)",
-
       color: "#fff",
-
       width: "100%",
-
       boxSizing: "border-box",
     },
 
     select: {
       padding: 10,
-
       borderRadius: 8,
-
       border:
         "1px solid rgba(255,255,255,0.15)",
-
       background:
         "rgba(0,0,0,0.25)",
-
       color: "#fff",
-
       width: "100%",
-
       boxSizing: "border-box",
     },
 
     actions: {
       display: "flex",
-
       gap: 10,
-
       marginTop: 20,
-
       flexWrap: "wrap",
     },
 
@@ -593,13 +592,11 @@ export default function FormulairSomaca({
 
     primary: {
       background: "#111",
-
       color: "#fff",
     },
 
     danger: {
       background: "#e74c3c",
-
       color: "#fff",
     },
   };
@@ -612,6 +609,7 @@ export default function FormulairSomaca({
     <div style={ui.page}>
 
       {/* NAVBAR */}
+
       <AppNavbar
         user={user}
         role={role}
@@ -620,9 +618,11 @@ export default function FormulairSomaca({
       />
 
       {/* CONTENU */}
+
       <div style={ui.content}>
 
         {/* VEHICULE */}
+
         <div style={ui.card}>
           <div style={ui.title}>
             Informations vehicule
@@ -630,25 +630,84 @@ export default function FormulairSomaca({
 
           <div style={ui.grid2}>
 
-            <input
-              style={{
-  ...ui.input,
-  colorScheme: "dark",
-  WebkitAppearance: "auto",
-  appearance: "auto",
-  color: form.date
-    ? "#fff"
-    : "rgba(255,255,255,0.5)",
-  width: "100%",
-  maxWidth: "100%",
-  minWidth: 0,
-  boxSizing: "border-box",
-}}
-              type="date"
-              name="date"
-              value={form.date}
-              onChange={handleChange}
-            />
+            {/* DATE */}
+
+            {isMobile ? (
+              <div
+                style={{
+                  position: "relative",
+                  width: "100%",
+                  minWidth: 0,
+                  maxWidth: "100%",
+                  height: 42,
+                  boxSizing: "border-box",
+                }}
+              >
+                <div
+                  style={{
+                    ...ui.input,
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 12px",
+                    boxSizing: "border-box",
+                    color: form.date
+                      ? "#fff"
+                      : "rgba(255,255,255,0.5)",
+                  }}
+                >
+                  <span>
+                    {formatDateDisplay(form.date)}
+                  </span>
+
+                  <span
+                    style={{
+                      fontSize: 18,
+                      lineHeight: 1,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    📅
+                  </span>
+                </div>
+
+                {/* Vrai champ date natif mobile */}
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  style={{
+                    position: "absolute",
+                    inset: 0,
+                    width: "100%",
+                    height: "100%",
+                    opacity: 0,
+                    cursor: "pointer",
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+            ) : (
+              /* PC : champ original conservé */
+              <input
+                style={{
+                  ...ui.input,
+                  colorScheme: "dark",
+                  WebkitAppearance: "auto",
+                  appearance: "auto",
+                  color: form.date
+                    ? "#fff"
+                    : "rgba(255,255,255,0.5)",
+                }}
+                type="date"
+                name="date"
+                value={form.date}
+                onChange={handleChange}
+              />
+            )}
 
             <input
               style={ui.input}
@@ -692,6 +751,7 @@ export default function FormulairSomaca({
         </div>
 
         {/* NATURE */}
+
         <div style={ui.card}>
           <div style={ui.title}>
             ️ Nature de l'avarie
@@ -731,6 +791,7 @@ export default function FormulairSomaca({
         </div>
 
         {/* POSITION */}
+
         <div
           style={{
             ...ui.card,
@@ -780,6 +841,7 @@ export default function FormulairSomaca({
         </div>
 
         {/* COTATION */}
+
         <div style={ui.card}>
           <div style={ui.title}>
             Cotation
@@ -791,9 +853,7 @@ export default function FormulairSomaca({
               width: "auto",
               minWidth: 120,
             }}
-
             value={cotation}
-
             onChange={(e) =>
               setCotation(
                 e.target.value
@@ -815,6 +875,7 @@ export default function FormulairSomaca({
         </div>
 
         {/* PHOTOS */}
+
         <div style={ui.card}>
           <div style={ui.title}>
             📷 Photos
@@ -842,6 +903,7 @@ export default function FormulairSomaca({
         </div>
 
         {/* ACTIONS */}
+
         <div style={ui.actions}>
 
           <button
@@ -886,7 +948,6 @@ export default function FormulairSomaca({
       </div>
 
       <Footer />
-
     </div>
   );
 }
