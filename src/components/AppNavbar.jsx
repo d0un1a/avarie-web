@@ -3,21 +3,18 @@ import { supabase } from "../api/supabase";
 
 export default function AppNavbar({
   user,
+  role,
   activeProfile,
   isMobile = false,
 }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const userMenuRef = useRef(null);
-
-  // ==========================================================
-  // FERMETURE DU MENU
-  // ==========================================================
+  const menuRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(event.target)
+        menuRef.current &&
+        !menuRef.current.contains(event.target)
       ) {
         setUserMenuOpen(false);
       }
@@ -44,382 +41,596 @@ export default function AppNavbar({
     };
   }, []);
 
-  // ==========================================================
-  // LOGOUT
-  // ==========================================================
-
-  const logout = async () => {
-    setUserMenuOpen(false);
-
-    await supabase.auth.signOut();
-
-    localStorage.removeItem("COMPANY_PROFILE");
-
-    window.location.href = "/login";
+  const goToHome = () => {
+    window.location.href = "/";
   };
 
-  // ==========================================================
-  // PROTECTION
-  // ==========================================================
+  const goToAdmin = () => {
+    setUserMenuOpen(false);
+    window.location.href = "/admin";
+  };
 
-  if (!activeProfile) {
-    return null;
-  }
+  const handleLogout = async () => {
+    try {
+      setUserMenuOpen(false);
+
+      await supabase.auth.signOut();
+
+      localStorage.removeItem("COMPANY_PROFILE");
+
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("❌ Erreur déconnexion :", error);
+    }
+  };
+
+  const userEmail = user?.email || "Utilisateur";
+  const userInitial = userEmail.charAt(0).toUpperCase();
 
   return (
-  <div
-    style={{
-      ...styles.navbar,
-      padding: isMobile
-        ? "10px 16px"
-        : "12px 30px",
-    }}
-  >
+    <header style={styles.navbar}>
+      <div style={styles.navbarInner}>
 
-    {/* ==================================================
-        LOGO ENTREPRISE
-    ================================================== */}
-
-    <div style={styles.navLogo}>
-      <img
-        src={activeProfile.logo}
-        alt={activeProfile.name}
-        style={{
-          ...styles.logoImg,
-          width: isMobile ? 90 : 110,
-          height: isMobile ? 38 : 48,
-        }}
-      />
-    </div>
-
-    {/* ==================================================
-        MENU UTILISATEUR
-    ================================================== */}
-
-    <div
-      ref={userMenuRef}
-      style={{
-        ...styles.userMenuWrapper,
-        marginLeft: "auto",
-      }}
-    >
+        {/* =====================================================
+            LOGO / TITRE
+        ===================================================== */}
         <button
           type="button"
-          aria-label="Ouvrir le menu utilisateur"
-          aria-haspopup="menu"
-          aria-expanded={userMenuOpen}
-          onClick={() =>
-            setUserMenuOpen((open) => !open)
-          }
-          style={{
-            ...styles.userMenuButton,
-            padding: isMobile
-              ? "6px 7px"
-              : "7px 9px",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background =
-              "rgba(255,255,255,0.11)";
-            e.currentTarget.style.borderColor =
-              "rgba(255,255,255,0.20)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background =
-              "rgba(255,255,255,0.06)";
-            e.currentTarget.style.borderColor =
-              "rgba(255,255,255,0.12)";
-          }}
+          onClick={goToHome}
+          style={styles.brand}
         >
-          <span style={styles.userAvatar}>
-            {user?.email?.charAt(0)?.toUpperCase() || "U"}
-          </span>
+          <div style={styles.logoBox}>
+            <img
+              src="/Logo_Navbar.jpg"
+              alt="Gestion des Avaries"
+              style={styles.logo}
+            />
+          </div>
 
-          <span
-            style={{
-              ...styles.chevron,
-              transform: userMenuOpen
-                ? "rotate(180deg)"
-                : "rotate(0deg)",
-            }}
-          >
-            ▾
-          </span>
-        </button>
-
-        {/* ================================================== */}
-        {/* DROPDOWN */}
-        {/* ================================================== */}
-
-        {userMenuOpen && (
-          <div
-            role="menu"
-            style={{
-              ...styles.userDropdown,
-              minWidth: isMobile ? 250 : 285,
-            }}
-          >
-            {/* INFORMATIONS UTILISATEUR */}
-
-            <div style={styles.userInfo}>
-              <div style={styles.dropdownAvatar}>
-                {user?.email?.charAt(0)?.toUpperCase() || "U"}
-              </div>
-
-              <div style={styles.userInfoText}>
-                <div style={styles.userInfoLabel}>
-                  Utilisateur connecté
-                </div>
-
-                <div style={styles.userInfoEmail}>
-                  {user?.email || "Email indisponible"}
-                </div>
-
-               <div style={styles.userCompany}>
-                {activeProfile?.id === "somaca"
-                ? "Flux Somaca"
-                : activeProfile?.name}
-               </div>
-              </div>
+          <div style={styles.brandText}>
+            <div style={styles.appName}>
+              Gestion des Avaries
             </div>
 
-            <div style={styles.dropdownDivider} />
+            <div style={styles.companyName}>
+  {activeProfile?.name?.trim().toUpperCase() === "SOMACA"
+    ? "Flux Somaca"
+    : activeProfile?.name || "OMSAN"}
+</div>
+          </div>
+        </button>
 
-            {/* DECONNEXION */}
+        {/* =====================================================
+            PARTIE DROITE
+        ===================================================== */}
+        <div style={styles.rightSection}>
 
+          {/* PROFIL */}
+          <div
+            ref={menuRef}
+            style={styles.userContainer}
+          >
             <button
               type="button"
-              role="menuitem"
-              onClick={logout}
-              style={styles.dropdownLogout}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background =
-                  "rgba(248,113,113,0.10)";
-                e.currentTarget.style.color =
-                  "#fca5a5";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background =
-                  "transparent";
-                e.currentTarget.style.color =
-                  "#cbd5e1";
-              }}
+              onClick={() =>
+                setUserMenuOpen(!userMenuOpen)
+              }
+              style={styles.userButton}
+              aria-expanded={userMenuOpen}
+              aria-haspopup="menu"
+              aria-controls="user-menu"
+              aria-label="Menu utilisateur"
             >
-              <span style={styles.logoutIcon}>
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M10 4H6.5C5.67 4 5 4.67 5 5.5V18.5C5 19.33 5.67 20 6.5 20H10"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
+              {/* AVATAR */}
+              <div style={styles.avatar}>
+                {userInitial}
+              </div>
 
-                  <path
-                    d="M13 8L17 12L13 16"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-
-                  <path
-                    d="M9 12H17"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </span>
-
-              <span>
-                Déconnexion
+              {/* FLECHE */}
+              <span
+                style={{
+                  ...styles.arrow,
+                  transform: userMenuOpen
+                    ? "rotate(180deg)"
+                    : "rotate(0deg)",
+                }}
+              >
+                ▼
               </span>
             </button>
+
+            {/* =================================================
+                MENU UTILISATEUR
+            ================================================= */}
+            {userMenuOpen && (
+              <div
+                id="user-menu"
+                style={styles.dropdown}
+                role="menu"
+                aria-label="Menu utilisateur"
+              >
+
+                {/* INFORMATIONS UTILISATEUR */}
+                <div style={styles.dropdownHeader}>
+                  <div style={styles.dropdownAvatar}>
+                    {userInitial}
+                  </div>
+
+                  <div style={styles.dropdownUserInfo}>
+                    <div style={styles.dropdownEmail}>
+                      {userEmail}
+                    </div>
+
+                    <div style={styles.dropdownRole}>
+                      {role === "admin"
+                        ? "Administrateur"
+                        : "Utilisateur"}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.divider} />
+
+                {/* =================================================
+                    ACCUEIL
+                ================================================= */}
+                <button
+  type="button"
+  onClick={goToHome}
+  style={styles.dropdownItem}
+  role="menuitem"
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background =
+      "rgba(59,130,246,0.10)";
+    e.currentTarget.style.color = "#93c5fd";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "transparent";
+    e.currentTarget.style.color =
+      "rgba(255,255,255,0.85)";
+  }}
+>
+  <span style={styles.itemIcon}>
+    <HomeIcon />
+  </span>
+
+  <span>
+    Accueil
+  </span>
+</button>
+
+                {/* =================================================
+                    ADMINISTRATION
+                ================================================= */}
+                {role === "admin" && (
+                  <>
+                    <button
+  type="button"
+  onClick={goToAdmin}
+  style={styles.dropdownAdmin}
+  role="menuitem"
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background =
+      "rgba(59,130,246,0.10)";
+    e.currentTarget.style.color = "#93c5fd";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "transparent";
+    e.currentTarget.style.color =
+      "rgba(255,255,255,0.85)";
+  }}
+>
+  <span style={styles.itemIcon}>
+    <SettingsIcon />
+  </span>
+
+  <span>
+    Administration
+  </span>
+</button>
+
+                    <div style={styles.divider} />
+                  </>
+                )}
+
+                {/* =================================================
+                    DECONNEXION
+                ================================================= */}
+                <button
+  type="button"
+  onClick={handleLogout}
+  style={styles.dropdownLogout}
+  role="menuitem"
+  onMouseEnter={(e) => {
+    e.currentTarget.style.background =
+      "rgba(239,68,68,0.10)";
+    e.currentTarget.style.color = "#fca5a5";
+  }}
+  onMouseLeave={(e) => {
+    e.currentTarget.style.background = "transparent";
+    e.currentTarget.style.color =
+      "rgba(255,255,255,0.85)";
+  }}
+>
+  <span style={styles.itemIcon}>
+    <LogoutIcon />
+  </span>
+
+  <span>
+    Déconnexion
+  </span>
+</button>
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
+    </header>
   );
 }
 
-// ============================================================
-// STYLES
-// ============================================================
+/* =============================================================
+   ICONES SVG
+============================================================= */
+
+function HomeIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 10.5L12 3L21 10.5V20C21 20.55 20.55 21 20 21H4C3.45 21 3 20.55 3 20V10.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M9 21V14H15V21"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M12 15.5C13.933 15.5 15.5 13.933 15.5 12C15.5 10.067 13.933 8.5 12 8.5C10.067 8.5 8.5 10.067 8.5 12C8.5 13.933 10.067 15.5 12 15.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
+
+      <path
+        d="M19.4 15C19.5 14.7 19.7 14.4 19.8 14.1L21 13L19.5 10.4L17.9 10.8C17.6 10.5 17.3 10.3 16.9 10.1L16.7 8.5L13.7 8L12.8 9.3C12.5 9.3 12.2 9.3 11.9 9.3L11 8L8 8.5L7.8 10.1C7.4 10.3 7.1 10.5 6.8 10.8L5.2 10.4L3.7 13L4.9 14.1C5 14.4 5.2 14.7 5.3 15L4.7 16.5L7.2 18L8.4 17C8.7 17.1 9.1 17.3 9.4 17.4L9.8 19H14.2L14.6 17.4C14.9 17.3 15.3 17.1 15.6 17L16.8 18L19.3 16.5L19.4 15Z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function LogoutIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M10 5H6C5.45 5 5 5.45 5 6V18C5 18.55 5.45 19 6 19H10"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M13 8L17 12L13 16"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+
+      <path
+        d="M17 12H9"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/* =============================================================
+   STYLES
+============================================================= */
 
 const styles = {
-    navbar: {
-  width: "100%",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  boxSizing: "border-box",
-  background: "transparent",
-  color: "#fff",
-},
+  /* =========================================================
+     NAVBAR
+  ========================================================= */
 
-  navLogo: {
-    display: "flex",
-    alignItems: "center",
-  },
-
-  logoImg: {
-    objectFit: "contain",
-    borderRadius: 6,
-    background: "#fff",
-    padding: "4px 8px",
-  },
-
-  userMenuWrapper: {
+  navbar: {
+    width: "100%",
+    background: "rgba(15, 23, 42, 0.97)",
+    borderBottom: "1px solid rgba(255,255,255,0.10)",
+    backdropFilter: "blur(14px)",
     position: "relative",
-    marginLeft: "auto",
+    zIndex: 1000,
   },
 
-  userMenuButton: {
+  navbarInner: {
+    width: "100%",
+    minHeight: 82,
+    padding: "8px 20px",
+    boxSizing: "border-box",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 7,
-    border:
-      "1px solid rgba(255,255,255,0.12)",
-    borderRadius: 10,
-    background:
-      "rgba(255,255,255,0.06)",
+    justifyContent: "space-between",
+  },
+
+  /* =========================================================
+     BRAND
+  ========================================================= */
+
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: 14,
+    border: "none",
+    background: "transparent",
     color: "#fff",
     cursor: "pointer",
-    transition:
-      "background 0.2s, border-color 0.2s",
-    fontWeight: 600,
-  },
-
-  userAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background:
-      "linear-gradient(135deg, #6366f1, #8b5cf6)",
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: 700,
-    flexShrink: 0,
-  },
-
-  chevron: {
-    fontSize: 15,
-    opacity: 0.65,
-    lineHeight: 1,
-    transition: "transform 0.2s",
-  },
-
-  userDropdown: {
-  position: "absolute",
-  top: "calc(100% + 10px)",
-  right: 0,
-  zIndex: 1000,
-
-  background: "#0f172a",
-
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 14,
-
-  boxShadow: "0 18px 45px rgba(0,0,0,0.35)",
-
-  overflow: "hidden",
-},
-
-  userInfo: {
-    display: "flex",
-    alignItems: "center",
-    gap: 12,
-    padding: "15px 16px",
-  },
-
-  dropdownAvatar: {
-    width: 42,
-    height: 42,
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background:
-      "linear-gradient(135deg, #6366f1, #8b5cf6)",
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: 700,
-    flexShrink: 0,
-  },
-
-  userInfoText: {
+    padding: 0,
+    textAlign: "left",
     minWidth: 0,
   },
 
-  userInfoLabel: {
-    fontSize: 11,
-    color:
-      "rgba(255,255,255,0.5)",
-    marginBottom: 3,
+  /* =========================================================
+     LOGO
+  ========================================================= */
+
+logoBox: {
+  width: 48,
+  height: 48,
+  borderRadius: "50%",
+  overflow: "hidden",
+  flexShrink: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+},
+
+logo: {
+  width: "100%",
+  height: "100%",
+  objectFit: "contain",
+  objectPosition: "center",
+  display: "block",
+},
+
+
+
+  /* =========================================================
+     TEXTE
+  ========================================================= */
+
+  brandText: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    minWidth: 0,
   },
 
-  userInfoEmail: {
-    fontSize: 13,
-    color: "#fff",
+  appName: {
+    fontSize: 17,
+    fontWeight: 700,
+    color: "#ffffff",
+    whiteSpace: "nowrap",
+  },
+
+  companyName: {
+    fontSize: 11,
     fontWeight: 600,
+    color: "rgba(255,255,255,0.55)",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    whiteSpace: "nowrap",
+  },
+
+  /* =========================================================
+     PARTIE DROITE
+  ========================================================= */
+
+  rightSection: {
+    display: "flex",
+    alignItems: "center",
+  },
+
+  userContainer: {
+    position: "relative",
+  },
+
+  userButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: 7,
+    border: "none",
+    background: "transparent",
+    color: "#fff",
+    cursor: "pointer",
+    padding: "6px 4px",
+    borderRadius: 10,
+  },
+
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: "50%",
+    background:
+      "linear-gradient(135deg, #3b82f6, #2563eb)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: 700,
+    flexShrink: 0,
+  },
+
+  arrow: {
+    fontSize: 9,
+    color: "rgba(255,255,255,0.45)",
+    transition: "transform 0.2s ease",
+    marginLeft: 2,
+  },
+
+  /* =========================================================
+     DROPDOWN
+  ========================================================= */
+
+  dropdown: {
+    position: "absolute",
+    top: "calc(100% + 10px)",
+    right: 0,
+    width: 260,
+    background: "#111827",
+    border: "1px solid rgba(255,255,255,0.12)",
+    borderRadius: 12,
+    boxShadow: "0 20px 50px rgba(0,0,0,0.45)",
+    overflow: "hidden",
+    padding: 8,
+  },
+
+  dropdownHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    padding: "10px 8px",
+  },
+
+  dropdownAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: "50%",
+    background:
+      "linear-gradient(135deg, #3b82f6, #2563eb)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#fff",
+    fontWeight: 700,
+    fontSize: 13,
+    flexShrink: 0,
+  },
+
+  dropdownUserInfo: {
+    minWidth: 0,
+    flex: 1,
+  },
+
+  dropdownEmail: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: "#fff",
     overflow: "hidden",
     textOverflow: "ellipsis",
     whiteSpace: "nowrap",
-    maxWidth: 215,
   },
 
-  userCompany: {
+  dropdownRole: {
     fontSize: 11,
-    color:
-      "rgba(255,255,255,0.55)",
-    marginTop: 4,
+    marginTop: 3,
+    color: "rgba(255,255,255,0.45)",
   },
 
-  dropdownDivider: {
+  divider: {
     height: 1,
-    background:
-      "rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.08)",
+    margin: "6px 0",
   },
 
-  dropdownLogout: {
+  /* =========================================================
+     MENU ITEMS
+  ========================================================= */
+
+  dropdownItem: {
     width: "100%",
     display: "flex",
     alignItems: "center",
     gap: 10,
+    padding: "11px 10px",
     border: "none",
+    borderRadius: 8,
     background: "transparent",
-    color: "#cbd5e1",
+    color: "rgba(255,255,255,0.85)",
     cursor: "pointer",
-    padding: "12px 16px",
     fontSize: 13,
-    fontWeight: 600,
     textAlign: "left",
-    transition:
-      "background 0.2s, color 0.2s",
   },
 
-  logoutIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+  dropdownAdmin: {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "11px 10px",
+  border: "none",
+  borderRadius: 8,
+  background: "transparent",
+  color: "rgba(255,255,255,0.85)",
+  cursor: "pointer",
+  fontSize: 13,
+  fontWeight: 600,
+  textAlign: "left",
+},
+
+  dropdownLogout: {
+  width: "100%",
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "11px 10px",
+  border: "none",
+  borderRadius: 8,
+  background: "transparent",
+  color: "rgba(255,255,255,0.85)",
+  cursor: "pointer",
+  fontSize: 13,
+  textAlign: "left",
+},
+
+  itemIcon: {
+    width: 22,
+    height: 20,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background:
-      "rgba(148,163,184,0.10)",
-    color: "#94a3b8",
     flexShrink: 0,
-    transition:
-      "background 0.2s, color 0.2s",
   },
 };

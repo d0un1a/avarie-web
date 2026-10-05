@@ -35,6 +35,7 @@ export default function DashboardSomaca() {
   const [sortKey, setSortKey] = useState("date");
   const [sortAsc, setSortAsc] = useState(false);
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
 
   const load = async () => {
     const { data, error } = await supabase
@@ -50,12 +51,63 @@ export default function DashboardSomaca() {
     setData(data || []);
   };
 
+  // ==================================================
+  // UTILISATEUR CONNECTE + ROLE
+  // IDENTIQUE A HOME
+  // ==================================================
+
   useEffect(() => {
     load();
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user || null);
-    });
+    const loadUser = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          window.location.href = "/login";
+          return;
+        }
+
+        setUser(session.user);
+
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("id, company, role")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error(
+            "Erreur récupération utilisateur :",
+            error
+          );
+          return;
+        }
+
+        if (!userData) {
+          console.error(
+            "Utilisateur introuvable dans public.users"
+          );
+          return;
+        }
+
+        setRole(userData.role || "user");
+
+        console.log(
+          "🔐 Role utilisateur :",
+          userData.role
+        );
+      } catch (error) {
+        console.error(
+          "Erreur chargement utilisateur :",
+          error
+        );
+      }
+    };
+
+    loadUser();
   }, []);
 
   const remove = async (id) => {
@@ -226,10 +278,10 @@ export default function DashboardSomaca() {
     fontWeight: 700,
     background:
       c === "V1"
-  ? "linear-gradient(135deg,#ef4444,#dc2626)"
-  : c === "V2"
-    ? "linear-gradient(135deg,#f59e0b,#d97706)"
-    : "linear-gradient(135deg,#22c55e,#16a34a)"
+        ? "linear-gradient(135deg,#ef4444,#dc2626)"
+        : c === "V2"
+        ? "linear-gradient(135deg,#f59e0b,#d97706)"
+        : "linear-gradient(135deg,#22c55e,#16a34a)"
   });
 
   const MobileCard = ({ r }) => {
@@ -399,6 +451,7 @@ export default function DashboardSomaca() {
 
       <AppNavbar
         user={user}
+        role={role}
         activeProfile={activeProfile}
         isMobile={isMobile}
       />
@@ -753,6 +806,7 @@ export default function DashboardSomaca() {
           </div>
         )}
       </div>
+
       <Footer />
     </div>
   );

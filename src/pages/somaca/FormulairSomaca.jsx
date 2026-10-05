@@ -34,24 +34,65 @@ export default function FormulairSomaca({
   onCancelEdit,
 }) {
   const isMobile = useIsMobile();
+
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
+
+  // --------------------------------------------------
+  // Utilisateur + rôle
+  // IDENTIQUE À HOME
+  // --------------------------------------------------
 
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+    const loadUser = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (error) {
-        console.error("Erreur récupération utilisateur :", error);
-        return;
+        if (!session?.user) {
+          window.location.href = "/login";
+          return;
+        }
+
+        setUser(session.user);
+
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("id, company, role")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error(
+            "Erreur récupération utilisateur :",
+            error
+          );
+          return;
+        }
+
+        if (!userData) {
+          console.error(
+            "Utilisateur introuvable dans public.users"
+          );
+          return;
+        }
+
+        setRole(userData.role || "user");
+
+        console.log(
+          "🔐 Role utilisateur :",
+          userData.role
+        );
+      } catch (error) {
+        console.error(
+          "Erreur chargement utilisateur :",
+          error
+        );
       }
-
-      setUser(user);
     };
 
-    getUser();
+    loadUser();
   }, []);
 
   const [schemaKey, setSchemaKey] = useState(0);
@@ -70,6 +111,9 @@ export default function FormulairSomaca({
   const [cotation, setCotation] = useState("V1");
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // AJOUT : permet de réinitialiser le champ "Choisir les fichiers"
+  const [fileInputKey, setFileInputKey] = useState(0);
 
   // --------------------------------------------------
   // Données du profil SOMACA
@@ -137,15 +181,60 @@ export default function FormulairSomaca({
       return;
     }
 
+    // Autoriser uniquement les images
+    const imageFiles = fileArray.filter((file) =>
+      file.type.startsWith("image/")
+    );
+
+    if (imageFiles.length !== fileArray.length) {
+      alert("Seules les images sont autorisées.");
+    }
+
+    if (!imageFiles.length) {
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Éviter les doublons dans la même sélection
+      const uniqueFiles = imageFiles.filter(
+        (file, index, array) =>
+          index ===
+          array.findIndex(
+            (f) =>
+              f.name === file.name &&
+              f.size === file.size &&
+              f.lastModified === file.lastModified
+          )
+      );
+
+      // Vérifier les photos déjà présentes
+      const filesToUpload = uniqueFiles.filter(
+        (file) =>
+          !photos.some(
+            (photo) =>
+              photo.name === file.name &&
+              photo.size === file.size
+          )
+      );
+
+      if (!filesToUpload.length) {
+        alert("Cette photo est déjà ajoutée.");
+        return;
+      }
+
       const results = await Promise.all(
-        fileArray.map(async (file) => {
+        filesToUpload.map(async (file) => {
           try {
+            const safeFileName = file.name
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-zA-Z0-9._-]/g, "_");
+
             const fileName = `${Date.now()}-${Math.random()
               .toString(36)
-              .slice(2)}-${file.name}`;
+              .slice(2)}-${safeFileName}`;
 
             const { error } = await supabase.storage
               .from("avaries-photos")
@@ -155,9 +244,14 @@ export default function FormulairSomaca({
               });
 
             if (error) {
-              console.warn(
+              console.error(
                 "Upload error:",
-                error.message
+                error
+              );
+
+              alert(
+                "Erreur upload image : " +
+                  error.message
               );
 
               return null;
@@ -169,6 +263,7 @@ export default function FormulairSomaca({
 
             return {
               name: file.name,
+              size: file.size,
               url: data.publicUrl,
             };
           } catch (error) {
@@ -185,15 +280,22 @@ export default function FormulairSomaca({
 
       const uploaded = results.filter(Boolean);
 
-      // AJOUTER les nouvelles photos aux anciennes
+      // Ajouter uniquement les nouvelles photos
       setPhotos((prev) => [
         ...prev,
-        ...uploaded,
+        ...uploaded.filter(
+          (newPhoto) =>
+            !prev.some(
+              (oldPhoto) =>
+                oldPhoto.name === newPhoto.name &&
+                oldPhoto.size === newPhoto.size
+            )
+        ),
       ]);
 
-      if (uploaded.length < fileArray.length) {
+      if (uploaded.length < filesToUpload.length) {
         alert(
-          `${uploaded.length}/${fileArray.length} photo(s) uploadee(s). Verifiez votre connexion.`
+          `${uploaded.length}/${filesToUpload.length} photo(s) uploadee(s). Verifiez votre connexion.`
         );
       }
     } catch (error) {
@@ -278,7 +380,52 @@ export default function FormulairSomaca({
   // Reset formulaire
   // --------------------------------------------------
 
-  const resetForm = () => {
+  const resetForm = async () => {
+    // Supprimer les photos du Storage Supabase
+    if (photos.length > 0) {
+      try {
+        const fileNames = photos
+          .map((photo) => {
+            if (!photo.url) return null;
+
+            // Récupérer uniquement le nom du fichier
+            const marker =
+              "/storage/v1/object/public/avaries-photos/";
+
+            const index =
+              photo.url.indexOf(marker);
+
+            if (index === -1) return null;
+
+            return decodeURIComponent(
+              photo.url.substring(
+                index + marker.length
+              )
+            );
+          })
+          .filter(Boolean);
+
+        if (fileNames.length > 0) {
+          const { error } = await supabase.storage
+            .from("avaries-photos")
+            .remove(fileNames);
+
+          if (error) {
+            console.error(
+              "Erreur suppression photos :",
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          "Erreur suppression photos :",
+          error
+        );
+      }
+    }
+
+    // Réinitialiser le formulaire
     setForm({
       ...emptyForm,
     });
@@ -288,6 +435,9 @@ export default function FormulairSomaca({
     setManqueType("");
     setCotation("V1");
     setPhotos([]);
+
+    // AJOUT : efface le nom du fichier affiché par le navigateur
+    setFileInputKey((prev) => prev + 1);
 
     setSchemaKey(
       (prev) => prev + 1
@@ -464,6 +614,7 @@ export default function FormulairSomaca({
       {/* NAVBAR */}
       <AppNavbar
         user={user}
+        role={role}
         activeProfile={profile}
         isMobile={isMobile}
       />
@@ -472,7 +623,6 @@ export default function FormulairSomaca({
       <div style={ui.content}>
 
         {/* VEHICULE */}
-
         <div style={ui.card}>
           <div style={ui.title}>
             Informations vehicule
@@ -542,9 +692,7 @@ export default function FormulairSomaca({
           </div>
         </div>
 
-
         {/* NATURE */}
-
         <div style={ui.card}>
           <div style={ui.title}>
             ️ Nature de l'avarie
@@ -583,9 +731,7 @@ export default function FormulairSomaca({
           </select>
         </div>
 
-
         {/* POSITION */}
-
         <div
           style={{
             ...ui.card,
@@ -634,9 +780,7 @@ export default function FormulairSomaca({
           />
         </div>
 
-
         {/* COTATION */}
-
         <div style={ui.card}>
           <div style={ui.title}>
             Cotation
@@ -671,17 +815,17 @@ export default function FormulairSomaca({
           </select>
         </div>
 
-
         {/* PHOTOS */}
-
         <div style={ui.card}>
           <div style={ui.title}>
             📷 Photos
           </div>
 
           <input
+            key={fileInputKey}
             type="file"
             multiple
+            accept="image/*"
             onChange={(e) =>
               uploadPhotos(
                 e.target.files
@@ -698,9 +842,7 @@ export default function FormulairSomaca({
           </div>
         </div>
 
-
         {/* ACTIONS */}
-
         <div style={ui.actions}>
 
           <button
@@ -709,12 +851,11 @@ export default function FormulairSomaca({
             disabled={loading}
           >
             {loading
-              ? "..."
+              ? "Creation..."
               : editData
                 ? "Modifier"
                 : "Creer"}
           </button>
-
 
           {editData && (
             <button
@@ -725,14 +866,12 @@ export default function FormulairSomaca({
             </button>
           )}
 
-
           <button
             style={ui.btn}
             onClick={resetForm}
           >
             Vider
           </button>
-
 
           <button
             style={ui.btn}

@@ -1,158 +1,92 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { supabase } from "../api/supabase";
 import Footer from "../components/Footer";
 
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" &&
-      window.innerWidth < 480
-  );
-
-  useEffect(() => {
-    const handler = () => {
-      setIsMobile(window.innerWidth < 480);
-    };
-
-    window.addEventListener("resize", handler);
-
-    return () => {
-      window.removeEventListener("resize", handler);
-    };
-  }, []);
-
-  return isMobile;
-}
-
-export default function Login() {
-  const isMobile = useIsMobile();
-
-  const [email, setEmail] = useState("");
+export default function ResetPassword() {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  async function handleLogin() {
-    setError("");
+  function translateAuthError(errorMessage) {
+    const translations = {
+      "New password should be different from the old password.":
+        "Le nouveau mot de passe doit être différent de l'ancien.",
 
-    const emailVal = email.trim();
-    const passwordVal = password.trim();
+      "Password should be at least 6 characters.":
+        "Le mot de passe doit contenir au moins 6 caractères.",
 
-    if (!emailVal || !passwordVal) {
-      return setError(
-        "Email et mot de passe obligatoires"
-      );
-    }
+      "Password should be at least 6 characters long.":
+        "Le mot de passe doit contenir au moins 6 caractères.",
 
-    setLoading(true);
+      "New password is required":
+        "Le nouveau mot de passe est obligatoire.",
 
-    const { data, error } =
-      await supabase.auth.signInWithPassword({
-        email: emailVal,
-        password: passwordVal,
-      });
+      "Auth session missing!":
+        "La session de réinitialisation a expiré. Veuillez refaire une demande de réinitialisation.",
 
-    setLoading(false);
+      "Invalid or expired token":
+        "Le lien de réinitialisation est invalide ou a expiré.",
 
-    if (error) {
-      let message =
-        "Impossible de se connecter. Veuillez réessayer.";
+      "Token has expired or is invalid":
+        "Le lien de réinitialisation est invalide ou a expiré.",
+    };
 
-      switch (error.message) {
-        case "Invalid login credentials":
-          message =
-            "Email ou mot de passe incorrect.";
-          break;
-
-        case "Email not confirmed":
-          message =
-            "Votre adresse email n'a pas encore été confirmée.";
-          break;
-
-        case "Too many requests":
-          message =
-            "Trop de tentatives de connexion. Veuillez patienter quelques instants.";
-          break;
-
-        default:
-          message =
-            "Impossible de se connecter. Veuillez vérifier vos identifiants.";
-      }
-
-      return setError(message);
-    }
-
-    if (data?.session) {
-      setTimeout(
-        () => window.location.replace("/"),
-        500
-      );
-    } else {
-      setError(
-        "Connexion échouée, réessayez."
-      );
-    }
+    return (
+      translations[errorMessage] ||
+      "Une erreur est survenue. Veuillez réessayer."
+    );
   }
 
-  async function handleForgotPassword() {
+  async function handleResetPassword() {
     setError("");
+    setMessage("");
 
-    const emailVal = email.trim();
-
-    if (!emailVal) {
+    if (!password || !confirmPassword) {
       return setError(
-        "Saisissez votre adresse email pour réinitialiser votre mot de passe."
+        "Veuillez renseigner les deux champs."
       );
     }
 
-    // Vérification du format de l'adresse email
-    const emailRegex =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailRegex.test(emailVal)) {
+    if (password !== confirmPassword) {
       return setError(
-        "Veuillez saisir une adresse email valide."
+        "Les mots de passe ne correspondent pas."
+      );
+    }
+
+    if (password.length < 6) {
+      return setError(
+        "Le mot de passe doit contenir au moins 6 caractères."
       );
     }
 
     setLoading(true);
 
     const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        emailVal,
-        {
-          redirectTo: `${window.location.origin}/reset-password`,
-        }
-      );
+      await supabase.auth.updateUser({
+        password,
+      });
 
     setLoading(false);
 
     if (error) {
-      let message =
-        "Impossible d'envoyer l'email de réinitialisation.";
-
-      switch (error.message) {
-        case "User not found":
-          message =
-            "Aucun compte ne correspond à cette adresse email.";
-          break;
-
-        case "Too many requests":
-          message =
-            "Trop de demandes. Veuillez patienter quelques instants avant de réessayer.";
-          break;
-
-        default:
-          message =
-            "Impossible d'envoyer l'email de réinitialisation. Veuillez réessayer.";
-      }
-
-      return setError(message);
+      return setError(
+        translateAuthError(error.message)
+      );
     }
 
-    setError(
-      "Un email de réinitialisation a été envoyé. Vérifiez votre boîte mail."
+    setMessage(
+      "Votre mot de passe a été modifié avec succès."
     );
+
+    await supabase.auth.signOut();
+
+    setTimeout(() => {
+      window.location.href = "/login";
+    }, 1500);
   }
 
   return (
@@ -172,45 +106,23 @@ export default function Login() {
         `}
       </style>
 
-      {/* ZONE LOGIN */}
-      <div style={styles.loginArea}>
-        <div
-          style={{
-            ...styles.card,
-            padding: isMobile ? 20 : 36,
-            maxWidth: isMobile ? "100%" : 420,
-            borderRadius: isMobile ? 12 : 16,
-            margin: isMobile ? 12 : 0,
-          }}
-        >
+      <div style={styles.resetArea}>
+        <div style={styles.card}>
 
           {/* LOGO */}
-          <div
-            style={{
-              ...styles.logoWrap,
-              marginBottom: isMobile ? 20 : 28,
-            }}
-          >
+          <div style={styles.logoWrap}>
             <img
               src="/Logo_Omsan.jpeg"
               alt="Omsan Logistics"
-              style={{
-                ...styles.logoImg,
-                height: isMobile ? 44 : 55,
-              }}
+              style={styles.logoImg}
             />
 
-            <div
-              style={{
-                ...styles.logoTitle,
-                fontSize: isMobile ? 18 : 22,
-              }}
-            >
+            <div style={styles.logoTitle}>
               Gestion des Avaries
             </div>
 
             <div style={styles.logoSub}>
-              Connectez-vous pour continuer
+              Réinitialisation du mot de passe
             </div>
           </div>
 
@@ -221,31 +133,17 @@ export default function Login() {
             </div>
           )}
 
-          {/* EMAIL */}
+          {/* SUCCÈS */}
+          {message && (
+            <div style={styles.successBox}>
+              ✅ {message}
+            </div>
+          )}
+
+          {/* NOUVEAU MOT DE PASSE */}
           <div style={styles.field}>
             <label style={styles.label}>
-              Email
-            </label>
-
-            <input
-              style={styles.input}
-              type="email"
-              placeholder="exemple@email.com"
-              value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
-              onKeyDown={(e) =>
-                e.key === "Enter" &&
-                handleLogin()
-              }
-            />
-          </div>
-
-          {/* MOT DE PASSE */}
-          <div style={styles.field}>
-            <label style={styles.label}>
-              Mot de passe
+              Nouveau mot de passe
             </label>
 
             <div style={styles.passwordWrap}>
@@ -261,13 +159,8 @@ export default function Login() {
                 onChange={(e) =>
                   setPassword(e.target.value)
                 }
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  handleLogin()
-                }
               />
 
-              {/* OEIL */}
               <button
                 type="button"
                 onClick={() =>
@@ -323,34 +216,101 @@ export default function Login() {
             </div>
           </div>
 
-          {/* MOT DE PASSE OUBLIE */}
-          <button
-            type="button"
-            onClick={handleForgotPassword}
-            style={styles.forgotPassword}
-          >
-            Mot de passe oublié ?
-          </button>
+          {/* CONFIRMATION */}
+          <div style={styles.field}>
+            <label style={styles.label}>
+              Confirmer le mot de passe
+            </label>
+
+            <div style={styles.passwordWrap}>
+              <input
+                style={styles.passwordInput}
+                type={
+                  showConfirmPassword
+                    ? "text"
+                    : "password"
+                }
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) =>
+                  setConfirmPassword(
+                    e.target.value
+                  )
+                }
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowConfirmPassword(
+                    (prev) => !prev
+                  )
+                }
+                style={styles.eyeButton}
+                aria-label={
+                  showConfirmPassword
+                    ? "Masquer le mot de passe"
+                    : "Afficher le mot de passe"
+                }
+              >
+                {showConfirmPassword ? (
+                  /* OEIL OUVERT */
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="2.5"
+                    />
+                  </svg>
+                ) : (
+                  /* OEIL FERME */
+                  <svg
+                    width="20"
+                    height="20"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M3 3l18 18" />
+                    <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+                    <path d="M9.9 4.2A10.8 10.8 0 0 1 12 4c5 0 8.5 4 10 8-0.6 1.7-1.5 3.1-2.7 4.3" />
+                    <path d="M6.2 6.2C4.6 6.8 3.4 8.7 2 12c1.5 4 5 8 10 8 1.7 0 3.2-.4 4.5-1.1" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
 
           {/* BOUTON */}
           <button
             style={{
               ...styles.btn,
               opacity: loading ? 0.7 : 1,
-              fontSize: isMobile ? 14 : 15,
             }}
-            onClick={handleLogin}
+            onClick={handleResetPassword}
             disabled={loading}
           >
             {loading
-              ? "Connexion..."
-              : "Se connecter"}
+              ? "Modification..."
+              : "Modifier le mot de passe"}
           </button>
 
         </div>
       </div>
 
-      {/* FOOTER */}
       <Footer />
 
     </div>
@@ -370,7 +330,7 @@ const styles = {
     boxSizing: "border-box",
   },
 
-  loginArea: {
+  resetArea: {
     flex: 1,
     width: "100%",
     display: "flex",
@@ -384,30 +344,21 @@ const styles = {
     border:
       "1px solid rgba(255,255,255,0.12)",
     width: "100%",
+    maxWidth: 420,
+    padding: 36,
+    borderRadius: 16,
     boxShadow:
       "0 20px 60px rgba(0,0,0,0.4)",
     backdropFilter: "blur(14px)",
   },
 
-  forgotPassword: {
-    display: "block",
-    width: "100%",
-    marginTop: 2,
-    marginBottom: 4,
-    padding: 0,
-    border: "none",
-    background: "transparent",
-    color: "#93c5fd",
-    fontSize: 13,
-    textAlign: "right",
-    cursor: "pointer",
-  },
-
   logoWrap: {
     textAlign: "center",
+    marginBottom: 28,
   },
 
   logoImg: {
+    height: 55,
     objectFit: "contain",
     borderRadius: 8,
     background: "#fff",
@@ -416,6 +367,7 @@ const styles = {
   },
 
   logoTitle: {
+    fontSize: 22,
     fontWeight: 700,
     color: "#fff",
     lineHeight: 1.3,
@@ -427,7 +379,6 @@ const styles = {
     fontSize: 13,
     lineHeight: 1.5,
     color: "rgba(255,255,255,0.62)",
-    textAlign: "center",
   },
 
   errorBox: {
@@ -438,6 +389,18 @@ const styles = {
     borderRadius: 8,
     padding: "10px 14px",
     color: "#fca5a5",
+    fontSize: 13,
+    marginBottom: 16,
+  },
+
+  successBox: {
+    background:
+      "rgba(34,197,94,0.15)",
+    border:
+      "1px solid rgba(34,197,94,0.4)",
+    borderRadius: 8,
+    padding: "10px 14px",
+    color: "#86efac",
     fontSize: 13,
     marginBottom: 16,
   },
@@ -453,20 +416,6 @@ const styles = {
     color:
       "rgba(255,255,255,0.7)",
     marginBottom: 6,
-  },
-
-  input: {
-    width: "100%",
-    padding: 11,
-    borderRadius: 8,
-    border:
-      "1px solid rgba(255,255,255,0.15)",
-    background:
-      "rgba(0,0,0,0.25)",
-    color: "#fff",
-    fontSize: 14,
-    outline: "none",
-    boxSizing: "border-box",
   },
 
   passwordWrap: {

@@ -36,6 +36,7 @@ export default function FormulairOmsan({
   const isMobile = useIsMobile();
 
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
   const [schemaKey, setSchemaKey] = useState(0);
   const [manqueType, setManqueType] = useState("");
 
@@ -57,29 +58,64 @@ export default function FormulairOmsan({
   const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // AJOUT : permet de réinitialiser le champ "Choisir les fichiers"
+  const [fileInputKey, setFileInputKey] = useState(0);
+
   // ==================================================
-  // Utilisateur connecté
+  // Utilisateur connecté + rôle depuis public.users
+  // IDENTIQUE À HOME
   // ==================================================
 
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-        error,
-      } = await supabase.auth.getUser();
+    const loadUser = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
 
-      if (error) {
+        if (!session?.user) {
+          window.location.href = "/login";
+          return;
+        }
+
+        setUser(session.user);
+
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("id, company, role")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error) {
+          console.error(
+            "Erreur récupération utilisateur :",
+            error
+          );
+          return;
+        }
+
+        if (!userData) {
+          console.error(
+            "Utilisateur introuvable dans public.users"
+          );
+          return;
+        }
+
+        setRole(userData.role || "user");
+
+        console.log(
+          "🔐 Role utilisateur :",
+          userData.role
+        );
+      } catch (error) {
         console.error(
-          "Erreur récupération utilisateur :",
+          "Erreur chargement utilisateur :",
           error
         );
-        return;
       }
-
-      setUser(user);
     };
 
-    getUser();
+    loadUser();
   }, []);
 
   // ==================================================
@@ -152,15 +188,60 @@ export default function FormulairOmsan({
       return;
     }
 
+    // Autoriser uniquement les images
+    const imageFiles = fileArray.filter((file) =>
+      file.type.startsWith("image/")
+    );
+
+    if (imageFiles.length !== fileArray.length) {
+      alert("Seules les images sont autorisées.");
+    }
+
+    if (!imageFiles.length) {
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Éviter les doublons dans la même sélection
+      const uniqueFiles = imageFiles.filter(
+        (file, index, array) =>
+          index ===
+          array.findIndex(
+            (f) =>
+              f.name === file.name &&
+              f.size === file.size &&
+              f.lastModified === file.lastModified
+          )
+      );
+
+      // Vérifier les photos déjà présentes
+      const filesToUpload = uniqueFiles.filter(
+        (file) =>
+          !photos.some(
+            (photo) =>
+              photo.name === file.name &&
+              photo.size === file.size
+          )
+      );
+
+      if (!filesToUpload.length) {
+        alert("Cette photo est déjà ajoutée.");
+        return;
+      }
+
       const results = await Promise.all(
-        fileArray.map(async (file) => {
+        filesToUpload.map(async (file) => {
           try {
+            const safeFileName = file.name
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .replace(/[^a-zA-Z0-9._-]/g, "_");
+
             const fileName = `${Date.now()}-${Math.random()
               .toString(36)
-              .slice(2)}-${file.name}`;
+              .slice(2)}-${safeFileName}`;
 
             const { error } = await supabase.storage
               .from("avaries-photos")
@@ -170,9 +251,14 @@ export default function FormulairOmsan({
               });
 
             if (error) {
-              console.warn(
+              console.error(
                 "Upload error:",
-                error.message
+                error
+              );
+
+              alert(
+                "Erreur upload image : " +
+                  error.message
               );
 
               return null;
@@ -184,6 +270,7 @@ export default function FormulairOmsan({
 
             return {
               name: file.name,
+              size: file.size,
               url: data.publicUrl,
             };
           } catch (error) {
@@ -200,11 +287,22 @@ export default function FormulairOmsan({
 
       const uploaded = results.filter(Boolean);
 
-      setPhotos(uploaded);
+      // Ajouter uniquement les nouvelles photos
+      setPhotos((prev) => [
+        ...prev,
+        ...uploaded.filter(
+          (newPhoto) =>
+            !prev.some(
+              (oldPhoto) =>
+                oldPhoto.name === newPhoto.name &&
+                oldPhoto.size === newPhoto.size
+            )
+        ),
+      ]);
 
-      if (uploaded.length < fileArray.length) {
+      if (uploaded.length < filesToUpload.length) {
         alert(
-          `${uploaded.length}/${fileArray.length} photo(s) uploadee(s). Verifiez votre connexion.`
+          `${uploaded.length}/${filesToUpload.length} photo(s) uploadee(s). Verifiez votre connexion.`
         );
       }
     } catch (error) {
@@ -289,7 +387,50 @@ export default function FormulairOmsan({
   // Reset
   // ==================================================
 
-  const resetForm = () => {
+  const resetForm = async () => {
+    // Supprimer les photos du Storage Supabase
+    if (photos.length > 0) {
+      try {
+        const fileNames = photos
+          .map((photo) => {
+            if (!photo.url) return null;
+
+            const marker =
+              "/storage/v1/object/public/avaries-photos/";
+
+            const index =
+              photo.url.indexOf(marker);
+
+            if (index === -1) return null;
+
+            return decodeURIComponent(
+              photo.url.substring(
+                index + marker.length
+              )
+            );
+          })
+          .filter(Boolean);
+
+        if (fileNames.length > 0) {
+          const { error } = await supabase.storage
+            .from("avaries-photos")
+            .remove(fileNames);
+
+          if (error) {
+            console.error(
+              "Erreur suppression photos :",
+              error
+            );
+          }
+        }
+      } catch (error) {
+        console.error(
+          "Erreur suppression photos :",
+          error
+        );
+      }
+    }
+
     setForm({
       ...emptyForm,
     });
@@ -299,6 +440,9 @@ export default function FormulairOmsan({
     setManqueType("");
     setCotation("V1");
     setPhotos([]);
+
+    // Effacer le nom du fichier affiché par le navigateur
+    setFileInputKey((prev) => prev + 1);
 
     setSchemaKey(
       (prev) => prev + 1
@@ -433,6 +577,7 @@ export default function FormulairOmsan({
 
       <AppNavbar
         user={user}
+        role={role}
         activeProfile={profile}
         isMobile={isMobile}
       />
@@ -677,8 +822,10 @@ export default function FormulairOmsan({
           </div>
 
           <input
+            key={fileInputKey}
             type="file"
             multiple
+            accept="image/*"
             onChange={(e) =>
               uploadPhotos(
                 e.target.files
@@ -705,7 +852,7 @@ export default function FormulairOmsan({
             disabled={loading}
           >
             {loading
-              ? "..."
+              ? "Creation..."
               : editData
                 ? "Modifier"
                 : "Creer"}
@@ -739,7 +886,8 @@ export default function FormulairOmsan({
         </div>
 
       </div>
-<Footer />
+
+      <Footer />
     </div>
   );
 }

@@ -14,7 +14,9 @@ import DashboardSomaca from "./somaca/DashboardSomaca";
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 480 : false
+    typeof window !== "undefined"
+      ? window.innerWidth < 480
+      : false
   );
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function Home() {
   const [view, setView] = useState("home");
   const [user, setUser] = useState(null);
   const [company, setCompany] = useState(null);
+  const [role, setRole] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
 
   useEffect(() => {
@@ -54,32 +57,78 @@ export default function Home() {
 
         setUser(session.user);
 
-        const email = session.user.email?.toLowerCase();
+        // ======================================================
+        // RÉCUPÉRATION UTILISATEUR
+        // ======================================================
 
         const { data: userData, error } = await supabase
           .from("users")
-          .select("*")
-          .eq("email", email)
+          .select("id, company, role")
+          .eq("id", session.user.id)
           .maybeSingle();
 
         if (error) {
-          console.error("Erreur récupération utilisateur :", error);
+          console.error(
+            "Erreur récupération utilisateur :",
+            error
+          );
+
           setLoadingProfile(false);
           return;
         }
 
-        const userCompany = userData?.company?.toLowerCase();
+        if (!userData) {
+          console.error(
+            "Utilisateur introuvable dans public.users"
+          );
 
-        if (userCompany !== "somaca" && userCompany !== "omsan") {
+          setLoadingProfile(false);
+          return;
+        }
+
+        // ======================================================
+        // ROLE
+        // ======================================================
+
+        setRole(userData.role || "user");
+
+        console.log(
+          "🔐 Role utilisateur :",
+          userData.role
+        );
+
+        // ======================================================
+        // PROFIL / ENTREPRISE
+        // ======================================================
+
+        const userCompany =
+          userData.company?.toLowerCase();
+
+        if (
+          userCompany !== "somaca" &&
+          userCompany !== "omsan"
+        ) {
           setCompany(null);
           setLoadingProfile(false);
           return;
         }
 
-        localStorage.setItem("COMPANY_PROFILE", userCompany);
+        localStorage.setItem(
+          "COMPANY_PROFILE",
+          userCompany
+        );
+
         setCompany(userCompany);
+
+        console.log(
+          "🏢 Profil entreprise :",
+          userCompany
+        );
       } catch (error) {
-        console.error("Erreur chargement profil :", error);
+        console.error(
+          "Erreur chargement profil :",
+          error
+        );
       } finally {
         setLoadingProfile(false);
       }
@@ -88,16 +137,31 @@ export default function Home() {
     loadUser();
   }, []);
 
+  // ==========================================================
+  // PROFIL ACTIF
+  // ==========================================================
+
   const activeCompany = company;
+
   const activeProfile = activeCompany
     ? profiles[activeCompany]
     : null;
 
+  // ==========================================================
+  // LOGOUT
+  // ==========================================================
+
   const logout = async () => {
     await supabase.auth.signOut();
+
     localStorage.removeItem("COMPANY_PROFILE");
+
     window.location.href = "/login";
   };
+
+  // ==========================================================
+  // CHARGEMENT
+  // ==========================================================
 
   if (loadingProfile) {
     return (
@@ -109,6 +173,10 @@ export default function Home() {
     );
   }
 
+  // ==========================================================
+  // PROFIL INVALIDE
+  // ==========================================================
+
   if (!activeProfile) {
     return (
       <div style={styles.loadingPage}>
@@ -118,16 +186,17 @@ export default function Home() {
           </div>
 
           <div style={styles.errorText}>
-            Votre compte n'est associé à aucune entreprise autorisée.
+            Votre compte n'est associé à aucune
+            entreprise autorisée.
           </div>
         </div>
       </div>
     );
   }
 
-  // =========================
+  // ==========================================================
   // DASHBOARD
-  // =========================
+  // ==========================================================
 
   if (view === "dashboard") {
     if (activeCompany === "somaca") {
@@ -137,9 +206,9 @@ export default function Home() {
     return <DashboardOmsan />;
   }
 
-  // =========================
+  // ==========================================================
   // CREATION
-  // =========================
+  // ==========================================================
 
   if (view === "create") {
     if (activeCompany === "somaca") {
@@ -157,25 +226,27 @@ export default function Home() {
     );
   }
 
-  // =========================
+  // ==========================================================
   // HOME
-  // =========================
+  // ==========================================================
 
   return (
     <div style={styles.page}>
 
-
-      {/* NAVBAR */}
+      {/* ==================================================
+          NAVBAR
+      ================================================== */}
 
       <AppNavbar
         user={user}
+        role={role}
         activeProfile={activeProfile}
         isMobile={isMobile}
       />
 
-      {/* =========================
+      {/* ==================================================
           HERO
-      ========================= */}
+      ================================================== */}
 
       <div
         style={{
@@ -186,8 +257,8 @@ export default function Home() {
         }}
       >
         <div style={styles.eyebrow}>
-            {activeProfile.id === "somaca"
-              ? "Flux Somaca · GESTION DES AVARIES"
+          {activeProfile.id === "somaca"
+            ? "Flux Somaca · GESTION DES AVARIES"
             : `${activeProfile.name.toUpperCase()} · GESTION DES AVARIES`}
         </div>
 
@@ -209,14 +280,14 @@ export default function Home() {
             fontSize: isMobile ? 13 : 15,
           }}
         >
-          Centralisez les dégâts, photos, cotations et informations
-          véhicules dans un seul outil.
+          Centralisez les dégâts, photos, cotations et
+          informations véhicules dans un seul outil.
         </p>
       </div>
 
-      {/* =========================
+      {/* ==================================================
           ACTIONS
-      ========================= */}
+      ================================================== */}
 
       <div
         style={{
@@ -228,29 +299,38 @@ export default function Home() {
           padding: isMobile ? "0 16px" : "0 20px",
         }}
       >
-        {/* =========================
-            CREER UNE AVARIE
-        ========================= */}
+
+        {/* ==================================================
+            CRÉER UNE AVARIE
+        ================================================== */}
 
         <button
           type="button"
           onClick={() => setView("create")}
           style={styles.actionCard}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.transform =
+              "translateY(-4px)";
+
             e.currentTarget.style.background =
               "rgba(255,255,255,0.085)";
+
             e.currentTarget.style.borderColor =
               "rgba(139,92,246,0.35)";
+
             e.currentTarget.style.boxShadow =
               "0 18px 40px rgba(0,0,0,0.22)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.transform =
+              "translateY(0)";
+
             e.currentTarget.style.background =
               "rgba(255,255,255,0.06)";
+
             e.currentTarget.style.borderColor =
               "rgba(255,255,255,0.12)";
+
             e.currentTarget.style.boxShadow =
               "0 10px 30px rgba(0,0,0,0.12)";
           }}
@@ -311,29 +391,37 @@ export default function Home() {
           </div>
         </button>
 
-        {/* =========================
+        {/* ==================================================
             VOIR LA LISTE
-        ========================= */}
+        ================================================== */}
 
         <button
           type="button"
           onClick={() => setView("dashboard")}
           style={styles.actionCard}
           onMouseEnter={(e) => {
-            e.currentTarget.style.transform = "translateY(-4px)";
+            e.currentTarget.style.transform =
+              "translateY(-4px)";
+
             e.currentTarget.style.background =
               "rgba(255,255,255,0.085)";
+
             e.currentTarget.style.borderColor =
               "rgba(59,130,246,0.35)";
+
             e.currentTarget.style.boxShadow =
               "0 18px 40px rgba(0,0,0,0.22)";
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.transform = "translateY(0)";
+            e.currentTarget.style.transform =
+              "translateY(0)";
+
             e.currentTarget.style.background =
               "rgba(255,255,255,0.06)";
+
             e.currentTarget.style.borderColor =
               "rgba(255,255,255,0.12)";
+
             e.currentTarget.style.boxShadow =
               "0 10px 30px rgba(0,0,0,0.12)";
           }}
@@ -367,8 +455,10 @@ export default function Home() {
               style={{
                 ...styles.actionBadge,
                 color: "#93c5fd",
-                background: "rgba(59,130,246,0.10)",
-                borderColor: "rgba(59,130,246,0.20)",
+                background:
+                  "rgba(59,130,246,0.10)",
+                borderColor:
+                  "rgba(59,130,246,0.20)",
               }}
             >
               Consultation
@@ -403,6 +493,10 @@ export default function Home() {
           </div>
         </button>
       </div>
+
+      {/* ==================================================
+          FOOTER
+      ================================================== */}
 
       <Footer />
     </div>
@@ -482,7 +576,8 @@ const styles = {
       "transform 0.2s, background 0.2s, border-color 0.2s, box-shadow 0.2s",
     textAlign: "left",
     backdropFilter: "blur(12px)",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.12)",
+    boxShadow:
+      "0 10px 30px rgba(0,0,0,0.12)",
     color: "#fff",
     fontFamily: "inherit",
   },
@@ -503,7 +598,8 @@ const styles = {
     justifyContent: "center",
     color: "#fff",
     flexShrink: 0,
-    boxShadow: "0 8px 20px rgba(0,0,0,0.18)",
+    boxShadow:
+      "0 8px 20px rgba(0,0,0,0.18)",
   },
 
   actionBadge: {
@@ -512,8 +608,10 @@ const styles = {
     fontSize: 10,
     fontWeight: 700,
     color: "#c4b5fd",
-    background: "rgba(139,92,246,0.10)",
-    border: "1px solid rgba(139,92,246,0.20)",
+    background:
+      "rgba(139,92,246,0.10)",
+    border:
+      "1px solid rgba(139,92,246,0.20)",
     whiteSpace: "nowrap",
   },
 
@@ -531,7 +629,8 @@ const styles = {
     margin: "8px 0 0",
     fontSize: 13,
     lineHeight: 1.6,
-    color: "rgba(255,255,255,0.58)",
+    color:
+      "rgba(255,255,255,0.58)",
     maxWidth: 360,
   },
 
@@ -542,10 +641,12 @@ const styles = {
     gap: 10,
     marginTop: 22,
     paddingTop: 14,
-    borderTop: "1px solid rgba(255,255,255,0.08)",
+    borderTop:
+      "1px solid rgba(255,255,255,0.08)",
     fontSize: 12,
     fontWeight: 600,
-    color: "rgba(255,255,255,0.65)",
+    color:
+      "rgba(255,255,255,0.65)",
   },
 
   actionArrow: {
@@ -575,8 +676,10 @@ const styles = {
     maxWidth: 450,
     padding: 28,
     borderRadius: 16,
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.12)",
+    background:
+      "rgba(255,255,255,0.06)",
+    border:
+      "1px solid rgba(255,255,255,0.12)",
     textAlign: "center",
   },
 
@@ -589,6 +692,8 @@ const styles = {
   errorText: {
     fontSize: 13,
     lineHeight: 1.6,
-    color: "rgba(255,255,255,0.6)",
+    color:
+      "rgba(255,255,255,0.6)",
   },
 };
+
