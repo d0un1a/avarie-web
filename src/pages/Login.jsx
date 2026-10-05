@@ -474,19 +474,20 @@ const styles = {
     width: "100%",
   },
 
-  passwordInput: {
-    width: "100%",
-    padding: "11px 44px 11px 11px",
-    borderRadius: 8,
-    border:
-      "1px solid rgba(255,255,255,0.15)",
-    background:
-      "rgba(0,0,0,0.25)",
-    color: "#fff",
-    fontSize: 14,
-    outline: "none",
-    boxSizing: "border-box",
-  },
+ passwordInput: {
+  width: "100%",
+  height: 40,
+  padding: "11px 44px 11px 11px",
+  borderRadius: 8,
+  border:
+    "1px solid rgba(255,255,255,0.15)",
+  background:
+    "rgba(0,0,0,0.25)",
+  color: "#fff",
+  fontSize: 14,
+  outline: "none",
+  boxSizing: "border-box",
+},
 
   eyeButton: {
     position: "absolute",
