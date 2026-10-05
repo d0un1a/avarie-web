@@ -634,11 +634,11 @@ export default function FormulairSomaca({
               style={{
   ...ui.input,
   colorScheme: "dark",
+  WebkitAppearance: "auto",
+  appearance: "auto",
   color: form.date
     ? "#fff"
     : "rgba(255,255,255,0.5)",
-  minWidth: 0,
-  height: 40,
 }}
               type="date"
               name="date"
