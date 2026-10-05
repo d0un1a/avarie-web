@@ -596,7 +596,7 @@ export default function FormulairOmsan({
           <div style={ui.grid2}>
 
             <input
-              style={{
+             style={{
   ...ui.input,
   colorScheme: "dark",
   WebkitAppearance: "auto",
@@ -604,6 +604,10 @@ export default function FormulairOmsan({
   color: form.date
     ? "#fff"
     : "rgba(255,255,255,0.5)",
+  width: "100%",
+  maxWidth: "100%",
+  minWidth: 0,
+  boxSizing: "border-box",
 }}
               type="date"
               name="date"
