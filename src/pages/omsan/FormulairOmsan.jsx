@@ -597,14 +597,14 @@ export default function FormulairOmsan({
 
             <input
               style={{
-                ...ui.input,
-                colorScheme: "dark",
-                WebkitAppearance: "none",
-                appearance: "none",
-                color: form.date
-                  ? "#fff"
-                  : "rgba(255,255,255,0.5)",
-              }}
+  ...ui.input,
+  colorScheme: "dark",
+  color: form.date
+    ? "#fff"
+    : "rgba(255,255,255,0.5)",
+  minWidth: 0,
+  height: 40,
+}}
               type="date"
               name="date"
               value={form.date}
