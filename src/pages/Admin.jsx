@@ -861,7 +861,13 @@ export default function Admin() {
                   Créer un utilisateur
                 </h2>
 
-                <p style={styles.actionText}>
+                <p
+  style={{
+    ...styles.actionText,
+    whiteSpace: isMobile ? "normal" : "nowrap",
+    overflowWrap: "anywhere",
+  }}
+>
                   Ajouter un nouvel utilisateur à
                   l'application et définir son profil,
                   sa société et son rôle.
@@ -1189,7 +1195,13 @@ export default function Admin() {
                   Utilisateurs
                 </h2>
 
-                <p style={styles.actionText}>
+                <p
+  style={{
+    ...styles.actionText,
+    whiteSpace: isMobile ? "normal" : "nowrap",
+    overflowWrap: "anywhere",
+  }}
+>
                   Consultez, recherchez, modifiez et
                   supprimez les comptes utilisateurs
                   de l'application.
