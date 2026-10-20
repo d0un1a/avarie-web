@@ -36,6 +36,10 @@ export default function Admin() {
   const [user, setUser] = useState(null);
   const [role, setRole] = useState(null);
 
+  // ✅ CORRECTION : tant que la session ET le rôle ne sont pas
+  // chargés, on n'affiche ni "Accès refusé" ni la page admin
+  const [authLoading, setAuthLoading] = useState(true);
+
   // ==========================================================
   // CREATION UTILISATEUR
   // ==========================================================
@@ -110,8 +114,6 @@ export default function Admin() {
           return;
         }
 
-        setUser(session.user);
-
         const { data: userData, error } = await supabase
           .from("users")
           .select("id, company, role")
@@ -133,6 +135,9 @@ export default function Admin() {
           return;
         }
 
+        // ✅ CORRECTION : user et role sont définis ensemble,
+        // une fois que les deux sont connus
+        setUser(session.user);
         setRole(userData.role || "user");
 
         console.log(
@@ -173,6 +178,10 @@ export default function Admin() {
           "Erreur chargement utilisateur :",
           error
         );
+      } finally {
+        // ✅ CORRECTION : la vérification est terminée,
+        // même en cas d'erreur ou de return anticipé
+        setAuthLoading(false);
       }
     };
 
@@ -672,8 +681,48 @@ export default function Admin() {
   // PROTECTION
   // ==========================================================
 
+  // ✅ CORRECTION : on attend la fin de la vérification
+  // avant de décider "Accès refusé"
+  if (authLoading) {
+    return (
+      <div style={styles.page}>
+        <main
+          style={{
+            ...styles.main,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <p style={styles.subtitle}>Chargement...</p>
+        </main>
+      </div>
+    );
+  }
+
+  // Chargement terminé mais utilisateur/rôle introuvable
+  // (erreur Supabase, ligne absente de public.users...)
   if (!user) {
-    return null;
+    return (
+      <div style={styles.page}>
+        <main
+          style={{
+            ...styles.main,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={styles.card}>
+            <h1 style={styles.title}>Session invalide</h1>
+            <p style={styles.subtitle}>
+              Impossible de récupérer votre profil.
+              Veuillez vous reconnecter.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   if (role !== "admin") {
@@ -862,12 +911,12 @@ export default function Admin() {
                 </h2>
 
                 <p
-  style={{
-    ...styles.actionText,
-    whiteSpace: isMobile ? "normal" : "nowrap",
-    overflowWrap: "anywhere",
-  }}
->
+                  style={{
+                    ...styles.actionText,
+                    whiteSpace: isMobile ? "normal" : "nowrap",
+                    overflowWrap: "anywhere",
+                  }}
+                >
                   Ajouter un nouvel utilisateur à
                   l'application et définir son profil,
                   sa société et son rôle.
@@ -1196,12 +1245,12 @@ export default function Admin() {
                 </h2>
 
                 <p
-  style={{
-    ...styles.actionText,
-    whiteSpace: isMobile ? "normal" : "nowrap",
-    overflowWrap: "anywhere",
-  }}
->
+                  style={{
+                    ...styles.actionText,
+                    whiteSpace: isMobile ? "normal" : "nowrap",
+                    overflowWrap: "anywhere",
+                  }}
+                >
                   Consultez, recherchez, modifiez et
                   supprimez les comptes utilisateurs
                   de l'application.
